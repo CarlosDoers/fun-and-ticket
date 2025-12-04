@@ -4,7 +4,7 @@ import { useAuth } from '../../src/lib/auth';
 import { Link, useRouter } from 'expo-router';
 
 export default function DashboardScreen() {
-  const { isAdmin, isGuide } = useAuth();
+  const { isAdmin, isGuide, signOut } = useAuth();
   const router = useRouter();
 
   return (
@@ -27,11 +27,12 @@ export default function DashboardScreen() {
             title="Back to App" 
             color="gray" 
             onPress={() => {
-              console.log('Back to App pressed, navigating to /');
+              console.log('Back to App pressed');
               if (Platform.OS === 'web') {
                 window.location.href = '/';
               } else {
-                router.replace('/');
+                // Use navigate instead of replace/push to find the existing route or go to root
+                router.navigate('/');
               }
             }}
           />
@@ -39,7 +40,17 @@ export default function DashboardScreen() {
       )}
 
       <View style={{ height: 20 }} />
-      <Button title="Sign Out" onPress={() => supabase.auth.signOut()} />
+      <Button 
+        title="Sign Out" 
+        onPress={async () => {
+          await signOut();
+          if (Platform.OS === 'web') {
+            window.location.href = '/';
+          } else {
+            router.replace('/');
+          }
+        }} 
+      />
     </View>
   );
 }

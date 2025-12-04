@@ -20,7 +20,22 @@ export default function LoginScreen() {
 
     console.log('Login result:', { data, error });
 
-    if (error) Alert.alert('Error', error.message);
+    if (error) {
+      Alert.alert('Error', error.message);
+    } else {
+      // Check role and redirect explicitly
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', data.user.id)
+        .single();
+      
+      if (profile?.role === 'admin' || profile?.role === 'guide') {
+        router.replace('/(dashboard)');
+      } else {
+        router.replace('/');
+      }
+    }
     setLoading(false);
   }
 

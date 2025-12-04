@@ -6,6 +6,7 @@ import { useAuth } from '../src/lib/auth';
 import { supabase } from '../src/lib/supabase';
 
 export default function WelcomeScreen() {
+  console.log('Rendering WelcomeScreen');
   const router = useRouter();
   const { session, isAdmin, isGuide } = useAuth();
 

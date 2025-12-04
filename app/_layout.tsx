@@ -19,9 +19,20 @@ function InitialLayout() {
       router.replace('/(auth)/login');
     }
 
+    console.log('RootLayout Effect:', { 
+      loading, 
+      hasSession: !!session, 
+      isAdmin, 
+      isGuide, 
+      segment: segments[0] 
+    });
+
+    // Check if we are in the auth group
+    const isAuthPage = segments[0] === '(auth)';
+
     // Allow authenticated users to visit the public root
     // Only redirect if they are in the auth group (login/signup pages)
-    if (inAuthGroup && session) {
+    if (isAuthPage && session) {
       if (isAdmin || isGuide) {
         console.log('Redirecting admin to dashboard');
         router.replace('/(dashboard)');

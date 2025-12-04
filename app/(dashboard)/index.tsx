@@ -1,10 +1,11 @@
-import { View, Text, Button, StyleSheet } from 'react-native';
+import { View, Text, Button, StyleSheet, Platform } from 'react-native';
 import { supabase } from '../../src/lib/supabase';
 import { useAuth } from '../../src/lib/auth';
-import { Link } from 'expo-router';
+import { Link, useRouter } from 'expo-router';
 
 export default function DashboardScreen() {
   const { isAdmin, isGuide } = useAuth();
+  const router = useRouter();
 
   return (
     <View style={styles.container}>
@@ -22,9 +23,18 @@ export default function DashboardScreen() {
             <Button title="Manage QRs" />
           </Link>
           <View style={{ height: 20 }} />
-          <Link href="/(app)/home" asChild>
-            <Button title="Back to App" color="gray" />
-          </Link>
+          <Button 
+            title="Back to App" 
+            color="gray" 
+            onPress={() => {
+              console.log('Back to App pressed, navigating to /');
+              if (Platform.OS === 'web') {
+                window.location.href = '/';
+              } else {
+                router.replace('/');
+              }
+            }}
+          />
         </View>
       )}
 

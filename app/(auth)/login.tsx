@@ -2,18 +2,23 @@ import React, { useState } from 'react';
 import { View, Text, TextInput, StyleSheet, Alert, TouchableOpacity, KeyboardAvoidingView, Platform } from 'react-native';
 import { supabase } from '../../src/lib/supabase';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useRouter } from 'expo-router';
 
 export default function LoginScreen() {
+  const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
 
   async function signInWithEmail() {
+    console.log('Attempting login with:', email);
     setLoading(true);
-    const { error } = await supabase.auth.signInWithPassword({
+    const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
+
+    console.log('Login result:', { data, error });
 
     if (error) Alert.alert('Error', error.message);
     setLoading(false);
@@ -91,6 +96,13 @@ export default function LoginScreen() {
               <Text style={[styles.buttonText, styles.secondaryButtonText]}>
                 Sign Up
               </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.homeLink}
+              onPress={() => router.replace('/')}
+            >
+              <Text style={styles.homeLinkText}>← Volver al Inicio</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -186,5 +198,14 @@ const styles = StyleSheet.create({
   },
   buttonDisabled: {
     opacity: 0.5,
+  },
+  homeLink: {
+    marginTop: 20,
+    alignItems: 'center',
+  },
+  homeLinkText: {
+    color: '#667eea',
+    fontSize: 16,
+    fontWeight: '600',
   },
 });

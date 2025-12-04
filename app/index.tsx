@@ -2,8 +2,24 @@ import { View, Text, StyleSheet, TouchableOpacity, Dimensions, Pressable } from 
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 
+import { useAuth } from '../src/lib/auth';
+import { supabase } from '../src/lib/supabase';
+
 export default function WelcomeScreen() {
   const router = useRouter();
+  const { session, isAdmin, isGuide } = useAuth();
+
+  const handleAdminAccess = async () => {
+    if (isAdmin || isGuide) {
+      router.push('/(dashboard)');
+    } else if (session) {
+      // If logged in as normal user, sign out first to allow admin login
+      await supabase.auth.signOut();
+      router.push('/(auth)/login');
+    } else {
+      router.push('/(auth)/login');
+    }
+  };
 
   return (
     <LinearGradient
@@ -34,9 +50,11 @@ export default function WelcomeScreen() {
 
         <Pressable
           style={styles.adminLink}
-          onPress={() => router.push('/(auth)/login')}
+          onPress={handleAdminAccess}
         >
-          <Text style={styles.adminLinkText}>Acceso Administradores →</Text>
+          <Text style={styles.adminLinkText}>
+            {isAdmin || isGuide ? 'Ir al Dashboard →' : 'Acceso Administradores →'}
+          </Text>
         </Pressable>
       </View>
     </LinearGradient>

@@ -4,7 +4,7 @@ import { useEffect } from 'react';
 import { View, ActivityIndicator } from 'react-native';
 
 function InitialLayout() {
-  const { session, loading } = useAuth();
+  const { session, loading, isAdmin, isGuide } = useAuth();
   const segments = useSegments();
   const router = useRouter();
 
@@ -18,7 +18,19 @@ function InitialLayout() {
     if (inDashboardGroup && !session) {
       router.replace('/(auth)/login');
     }
-  }, [session, loading, segments]);
+
+    // Allow authenticated users to visit the public root
+    // Only redirect if they are in the auth group (login/signup pages)
+    if (inAuthGroup && session) {
+      if (isAdmin || isGuide) {
+        console.log('Redirecting admin to dashboard');
+        router.replace('/(dashboard)');
+      } else {
+        console.log('Redirecting user to home');
+        router.replace('/');
+      }
+    }
+  }, [session, loading, segments, isAdmin, isGuide]);
 
   if (loading) {
     return (

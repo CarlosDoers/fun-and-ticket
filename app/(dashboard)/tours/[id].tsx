@@ -1,21 +1,50 @@
-import React, { useState } from 'react';
-import { View, Text, TextInput, Button, StyleSheet, Alert } from 'react-native';
-import { useRouter } from 'expo-router';
+import React, { useState, useEffect } from 'react';
+import { View, Text, TextInput, Button, StyleSheet, Alert, ScrollView } from 'react-native';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { supabase } from '../../../src/lib/supabase';
 import { useAuth } from '../../../src/lib/auth';
-
 import WebMapEditor from '../../../src/components/WebMapEditor';
-import { RouteData } from '../../../src/types';
+import { RouteData, Tour } from '../../../src/types';
 
-export default function CreateTour() {
+export default function EditTour() {
+  const { id } = useLocalSearchParams<{ id: string }>();
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [routeData, setRouteData] = useState<RouteData>({ waypoints: [], pois: [] });
   const [loading, setLoading] = useState(false);
+  const [fetching, setFetching] = useState(true);
   const { user } = useAuth();
   const router = useRouter();
 
-  async function createTour() {
+  useEffect(() => {
+    if (id) {
+      fetchTour();
+    }
+  }, [id]);
+
+  async function fetchTour() {
+    try {
+      const { data, error } = await supabase
+        .from('tours')
+        .select('*')
+        .eq('id', id)
+        .single();
+
+      if (error) throw error;
+      
+      if (data) {
+        setName(data.name);
+        setDescription(data.description);
+        setRouteData(data.route_data || { waypoints: [], pois: [] });
+      }
+    } catch (error: any) {
+      Alert.alert('Error fetching tour', error.message);
+    } finally {
+      setFetching(false);
+    }
+  }
+
+  async function updateTour() {
     if (!name || !description) {
       Alert.alert('Please fill in all fields');
       return;
@@ -23,25 +52,36 @@ export default function CreateTour() {
 
     setLoading(true);
     try {
-      const { error } = await supabase.from('tours').insert({
-        name,
-        description,
-        created_by: user?.id,
-        route_data: routeData,
-      });
+      const { error } = await supabase
+        .from('tours')
+        .update({
+          name,
+          description,
+          route_data: routeData,
+        })
+        .eq('id', id);
 
       if (error) throw error;
+      Alert.alert('Success', 'Tour updated successfully');
       router.back();
     } catch (error: any) {
-      Alert.alert('Error creating tour', error.message);
+      Alert.alert('Error updating tour', error.message);
     } finally {
       setLoading(false);
     }
   }
 
+  if (fetching) {
+    return (
+      <View style={styles.container}>
+        <Text>Loading...</Text>
+      </View>
+    );
+  }
+
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Create New Tour</Text>
+    <ScrollView style={styles.container}>
+      <Text style={styles.title}>Edit Tour</Text>
       
       <TextInput
         style={styles.input}
@@ -65,8 +105,9 @@ export default function CreateTour() {
       />
       <View style={{ height: 20 }} />
 
-      <Button title="Create Tour" onPress={createTour} disabled={loading} />
-    </View>
+      <Button title="Update Tour" onPress={updateTour} disabled={loading} />
+      <View style={{ height: 20 }} />
+    </ScrollView>
   );
 }
 

@@ -5,11 +5,26 @@ export type Profile = {
   created_at: string;
 };
 
+export type Coordinate = {
+  latitude: number;
+  longitude: number;
+};
+
+export type POI = Coordinate & {
+  title: string;
+  description: string;
+};
+
+export type RouteData = {
+  waypoints: Coordinate[];
+  pois: POI[];
+};
+
 export type Tour = {
   id: string;
   name: string;
   description: string;
-  route_data: any; // JSONB for coordinates
+  route_data: RouteData; // JSONB for coordinates
   created_by: string;
   created_at: string;
 };

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, FlatList, Button, StyleSheet, Alert } from 'react-native';
+import { View, Text, FlatList, Button, StyleSheet, Alert, TouchableOpacity } from 'react-native';
 import { Link, useRouter } from 'expo-router';
 import { supabase } from '../../../src/lib/supabase';
 import { Tour } from '../../../src/types';
@@ -53,10 +53,13 @@ export default function ToursList() {
         keyExtractor={(item) => item.id}
         renderItem={({ item }) => (
           <View style={styles.item}>
-            <View>
+            <TouchableOpacity 
+              style={styles.itemContent}
+              onPress={() => router.push(`/(dashboard)/tours/${item.id}`)}
+            >
               <Text style={styles.itemTitle}>{item.name}</Text>
               <Text>{item.description}</Text>
-            </View>
+            </TouchableOpacity>
             <Button title="Delete" color="red" onPress={() => deleteTour(item.id)} />
           </View>
         )}
@@ -88,6 +91,10 @@ const styles = StyleSheet.create({
     padding: 15,
     borderBottomWidth: 1,
     borderBottomColor: '#ccc',
+  },
+  itemContent: {
+    flex: 1,
+    marginRight: 10,
   },
   itemTitle: {
     fontSize: 18,

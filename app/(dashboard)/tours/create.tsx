@@ -16,11 +16,34 @@ export default function CreateTour() {
   const router = useRouter();
 
   async function createTour() {
-    if (!name || !description) {
-      Alert.alert('Please fill in all fields');
+    // Validate required fields
+    if (!name.trim()) {
+      Alert.alert('Required Field', 'Tour Name is required');
+      return;
+    }
+    
+    if (!description.trim()) {
+      Alert.alert('Required Field', 'Description is required');
       return;
     }
 
+    // Warn if no route data
+    if (routeData.pois.length === 0) {
+      Alert.alert(
+        'No Points of Interest',
+        'You haven\'t added any points of interest. Do you want to continue?',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Continue', onPress: () => saveTour() }
+        ]
+      );
+      return;
+    }
+
+    saveTour();
+  }
+
+  async function saveTour() {
     setLoading(true);
     try {
       const { error } = await supabase.from('tours').insert({
@@ -31,6 +54,7 @@ export default function CreateTour() {
       });
 
       if (error) throw error;
+      Alert.alert('Success', 'Tour created successfully');
       router.back();
     } catch (error: any) {
       Alert.alert('Error creating tour', error.message);

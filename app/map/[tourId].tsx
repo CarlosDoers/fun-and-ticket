@@ -1,37 +1,40 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, Dimensions, ActivityIndicator } from 'react-native';
-import MapView, { Marker, Polyline, PROVIDER_GOOGLE } from '../../src/components/MapView';
-import { useLocalSearchParams } from 'expo-router';
+import { View, Text, StyleSheet, Dimensions, ActivityIndicator, TouchableOpacity } from 'react-native';
+import MapView from '../../src/components/MapView';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { supabase } from '../../src/lib/supabase';
 import { Tour } from '../../src/types';
 
 export default function PublicMapScreen() {
   const { tourId } = useLocalSearchParams();
+  const router = useRouter();
   const [tour, setTour] = useState<Tour | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    async function fetchTour(id: string) {
+      try {
+        const { data, error } = await supabase
+          .from('tours')
+          .select('*')
+          .eq('id', id)
+          .single();
+
+        if (error) throw error;
+        setTour(data);
+      } catch (error) {
+        console.error('Error fetching tour:', error);
+      } finally {
+        setLoading(false);
+      }
+    }
+
     if (tourId) {
       fetchTour(tourId as string);
-    }
-  }, [tourId]);
-
-  async function fetchTour(id: string) {
-    try {
-      const { data, error } = await supabase
-        .from('tours')
-        .select('*')
-        .eq('id', id)
-        .single();
-
-      if (error) throw error;
-      setTour(data);
-    } catch (error) {
-      console.error(error);
-    } finally {
+    } else {
       setLoading(false);
     }
-  }
+  }, [tourId]);
 
   if (loading) {
     return (
@@ -45,40 +48,52 @@ export default function PublicMapScreen() {
     return (
       <View style={styles.container}>
         <Text style={styles.errorText}>Tour no encontrado.</Text>
+        <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+          <Text style={styles.backButtonText}>← Volver</Text>
+        </TouchableOpacity>
       </View>
     );
   }
 
-  // Mock route data if not present
-  const routeCoordinates = tour.route_data?.coordinates || [
-    { latitude: 37.78825, longitude: -122.4324 },
-    { latitude: 37.78925, longitude: -122.4344 },
-    { latitude: 37.79025, longitude: -122.4364 },
-  ];
+  // const routeData = tour.route_data;
+  const routeData = tour.route_data;
+  const waypoints = routeData?.waypoints || [];
+  const pois = routeData?.pois || [];
+
+  // If no route data, show error
+  if (waypoints.length === 0) {
+    return (
+      <View style={styles.container}>
+        <Text style={styles.errorText}>Este tour no tiene una ruta definida.</Text>
+        <Text style={styles.helpText}>Por favor, edita el tour en el dashboard y genera una ruta.</Text>
+        <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+          <Text style={styles.backButtonText}>← Volver</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
       <MapView
+        routeData={routeData}
         style={styles.map}
-        provider={PROVIDER_GOOGLE}
-        initialRegion={{
-          latitude: routeCoordinates[0].latitude,
-          longitude: routeCoordinates[0].longitude,
-          latitudeDelta: 0.0922,
-          longitudeDelta: 0.0421,
-        }}
+      />
+      
+      {/* Back button overlay */}
+      <TouchableOpacity 
+        style={styles.backButtonOverlay} 
+        onPress={() => router.back()}
       >
-        <Marker coordinate={routeCoordinates[0]} title="Inicio" pinColor="#667eea" />
-        <Marker coordinate={routeCoordinates[routeCoordinates.length - 1]} title="Fin" pinColor="#f093fb" />
-        <Polyline
-          coordinates={routeCoordinates}
-          strokeColor="#667eea"
-          strokeWidth={4}
-        />
-      </MapView>
+        <Text style={styles.backButtonOverlayText}>← Volver</Text>
+      </TouchableOpacity>
+
       <View style={styles.infoBox}>
         <Text style={styles.tourTitle}>{tour.name}</Text>
         <Text style={styles.tourDescription}>{tour.description}</Text>
+        {pois.length > 0 && (
+          <Text style={styles.poiCount}>📍 {pois.length} puntos de interés</Text>
+        )}
       </View>
     </View>
   );
@@ -119,8 +134,53 @@ const styles = StyleSheet.create({
     color: '#666',
     lineHeight: 22,
   },
+  poiCount: {
+    fontSize: 14,
+    color: '#667eea',
+    marginTop: 8,
+    fontWeight: '600',
+  },
   errorText: {
     fontSize: 18,
     color: '#666',
+    marginBottom: 10,
+    textAlign: 'center',
+  },
+  helpText: {
+    fontSize: 14,
+    color: '#999',
+    marginBottom: 20,
+    textAlign: 'center',
+    paddingHorizontal: 40,
+  },
+  backButton: {
+    backgroundColor: '#667eea',
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 8,
+  },
+  backButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  backButtonOverlay: {
+    position: 'absolute',
+    top: 50,
+    left: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  backButtonOverlayText: {
+    color: '#667eea',
+    fontSize: 16,
+    fontWeight: 'bold',
   },
 });

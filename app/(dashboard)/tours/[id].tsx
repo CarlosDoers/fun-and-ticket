@@ -45,8 +45,14 @@ export default function EditTour() {
   }
 
   async function updateTour() {
-    if (!name || !description) {
-      Alert.alert('Please fill in all fields');
+    // Validate required fields
+    if (!name.trim()) {
+      Alert.alert('Required Field', 'Tour Name is required');
+      return;
+    }
+    
+    if (!description.trim()) {
+      Alert.alert('Required Field', 'Description is required');
       return;
     }
 

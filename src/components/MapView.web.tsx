@@ -1,7 +1,6 @@
 import React from 'react';
-import { View, StyleSheet } from 'react-native';
+import { View, StyleSheet, StyleProp, ViewStyle } from 'react-native';
 import { MapContainer, TileLayer, Marker, Popup, Polyline } from 'react-leaflet';
-import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 import { RouteData } from '../types';
 
@@ -17,7 +16,7 @@ L.Marker.prototype.options.icon = DefaultIcon;
 
 interface MapViewProps {
   routeData?: RouteData;
-  style?: any;
+  style?: StyleProp<ViewStyle>;
 }
 
 export default function MapView({ routeData, style }: MapViewProps) {

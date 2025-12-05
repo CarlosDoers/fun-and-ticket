@@ -26,6 +26,9 @@
       "favicon": "./assets/favicon.png",
       "bundler": "metro"
     },
-    "scheme": "funandtickets"
+    "scheme": "funandtickets",
+    "plugins": [
+      "expo-router"
+    ]
   }
 }

@@ -1,13 +1,17 @@
 import React, { useState } from 'react';
-import { StyleSheet, View, Text, Image, Pressable, Dimensions, ScrollView } from 'react-native';
-import RNMapView, { Marker, Polyline, PROVIDER_GOOGLE, Callout } from 'react-native-maps';
-import { RouteData } from '../types';
+import { StyleSheet, View, Text, Image, Pressable, Dimensions, Modal, TouchableOpacity, ScrollView, SafeAreaView } from 'react-native';
+import RNMapView, { Marker, Polyline, PROVIDER_GOOGLE } from 'react-native-maps';
+import { RouteData, POI } from '../types';
 
-// Image Carousel Component for POI - Simplified for Callout compatibility
-function POIImageCarousel({ images }: { images?: string[] }) {
+const { width: screenWidth } = Dimensions.get('window');
+
+// Full-screen Modal for POI Details with working carousel
+function POIDetailModal({ poi, visible, onClose }: { poi: POI | null; visible: boolean; onClose: () => void }) {
   const [currentIndex, setCurrentIndex] = useState(0);
 
-  if (!images || images.length === 0) return null;
+  if (!poi) return null;
+
+  const images = poi.images || [];
 
   const handlePrevious = () => {
     setCurrentIndex((prev) => (prev === 0 ? images.length - 1 : prev - 1));
@@ -18,49 +22,66 @@ function POIImageCarousel({ images }: { images?: string[] }) {
   };
 
   return (
-    <View style={styles.carouselContainer}>
-      <Image 
-        source={{ uri: images[currentIndex] }}
-        style={styles.carouselImage}
-        resizeMode="cover"
-      />
-      
-      {images.length > 1 && (
-        <>
-          {/* Using Pressable with larger hitSlop for better touch detection in Callouts */}
-          <Pressable
-            onPress={handlePrevious}
-            style={({ pressed }) => [
-              styles.carouselButton, 
-              styles.carouselButtonLeft,
-              pressed && { opacity: 0.7 }
-            ]}
-            hitSlop={{ top: 15, bottom: 15, left: 15, right: 15 }}
-          >
-            <Text style={styles.carouselButtonText}>‹</Text>
-          </Pressable>
-          
-          <Pressable
-            onPress={handleNext}
-            style={({ pressed }) => [
-              styles.carouselButton, 
-              styles.carouselButtonRight,
-              pressed && { opacity: 0.7 }
-            ]}
-            hitSlop={{ top: 15, bottom: 15, left: 15, right: 15 }}
-          >
-            <Text style={styles.carouselButtonText}>›</Text>
-          </Pressable>
-          
-          {/* Image counter */}
-          <View style={styles.imageCounter}>
-            <Text style={styles.imageCounterText}>
-              {currentIndex + 1} / {images.length}
-            </Text>
-          </View>
-        </>
-      )}
-    </View>
+    <Modal
+      visible={visible}
+      animationType="slide"
+      transparent={true}
+      onRequestClose={onClose}
+    >
+      <SafeAreaView style={styles.modalOverlay}>
+        <View style={styles.modalContent}>
+          {/* Close button */}
+          <TouchableOpacity style={styles.closeButton} onPress={onClose}>
+            <Text style={styles.closeButtonText}>✕</Text>
+          </TouchableOpacity>
+
+          <ScrollView showsVerticalScrollIndicator={false}>
+            {/* Image Carousel */}
+            {images.length > 0 && (
+              <View style={styles.imageCarouselContainer}>
+                <Image 
+                  source={{ uri: images[currentIndex] }}
+                  style={styles.carouselImage}
+                  resizeMode="cover"
+                />
+                
+                {images.length > 1 && (
+                  <>
+                    <TouchableOpacity
+                      style={[styles.carouselButton, styles.carouselButtonLeft]}
+                      onPress={handlePrevious}
+                      activeOpacity={0.7}
+                    >
+                      <Text style={styles.carouselButtonText}>‹</Text>
+                    </TouchableOpacity>
+                    
+                    <TouchableOpacity
+                      style={[styles.carouselButton, styles.carouselButtonRight]}
+                      onPress={handleNext}
+                      activeOpacity={0.7}
+                    >
+                      <Text style={styles.carouselButtonText}>›</Text>
+                    </TouchableOpacity>
+                    
+                    <View style={styles.imageCounter}>
+                      <Text style={styles.imageCounterText}>
+                        {currentIndex + 1} / {images.length}
+                      </Text>
+                    </View>
+                  </>
+                )}
+              </View>
+            )}
+
+            {/* POI Info */}
+            <View style={styles.poiInfo}>
+              <Text style={styles.poiTitle}>{poi.title || 'Punto de Interés'}</Text>
+              <Text style={styles.poiDescription}>{poi.description || 'Sin descripción'}</Text>
+            </View>
+          </ScrollView>
+        </View>
+      </SafeAreaView>
+    </Modal>
   );
 }
 
@@ -70,10 +91,16 @@ interface MapViewProps {
 }
 
 export default function MapView({ routeData, style }: MapViewProps) {
+  const [selectedPoi, setSelectedPoi] = useState<POI | null>(null);
+  const [modalVisible, setModalVisible] = useState(false);
+
   const waypoints = routeData?.waypoints || routeData?.coordinates || [];
   const pois = routeData?.pois || [];
 
-
+  const handleMarkerPress = (poi: POI) => {
+    setSelectedPoi(poi);
+    setModalVisible(true);
+  };
 
   if (waypoints.length === 0) {
     return (
@@ -95,46 +122,49 @@ export default function MapView({ routeData, style }: MapViewProps) {
   
   const centerLat = (minLat + maxLat) / 2;
   const centerLng = (minLng + maxLng) / 2;
-  const latDelta = (maxLat - minLat) * 1.5; // Add padding
+  const latDelta = (maxLat - minLat) * 1.5;
   const lngDelta = (maxLng - minLng) * 1.5;
 
   return (
-    <RNMapView
-      style={[styles.map, style]}
-      provider={PROVIDER_GOOGLE}
-      initialRegion={{
-        latitude: centerLat,
-        longitude: centerLng,
-        latitudeDelta: Math.max(latDelta, 0.01),
-        longitudeDelta: Math.max(lngDelta, 0.01),
-      }}
-    >
-      {/* Route polyline */}
-      <Polyline
-        coordinates={waypoints.map(w => ({ latitude: w.latitude, longitude: w.longitude }))}
-        strokeColor="#667eea"
-        strokeWidth={4}
-      />
+    <>
+      <RNMapView
+        style={[styles.map, style]}
+        provider={PROVIDER_GOOGLE}
+        initialRegion={{
+          latitude: centerLat,
+          longitude: centerLng,
+          latitudeDelta: Math.max(latDelta, 0.01),
+          longitudeDelta: Math.max(lngDelta, 0.01),
+        }}
+      >
+        {/* Route polyline */}
+        <Polyline
+          coordinates={waypoints.map(w => ({ latitude: w.latitude, longitude: w.longitude }))}
+          strokeColor="#667eea"
+          strokeWidth={4}
+        />
 
-      {/* POI markers */}
-      {pois.map((poi, index) => (
-        <Marker
-          key={index}
-          coordinate={{ latitude: poi.latitude, longitude: poi.longitude }}
-          pinColor="#f093fb"
-        >
-          <Callout tooltip>
-            <View style={styles.calloutContainer}>
-              {poi.images && poi.images.length > 0 && (
-                <POIImageCarousel images={poi.images} />
-              )}
-              <Text style={styles.calloutTitle}>{poi.title}</Text>
-              <Text style={styles.calloutDescription}>{poi.description}</Text>
-            </View>
-          </Callout>
-        </Marker>
-      ))}
-    </RNMapView>
+        {/* POI markers */}
+        {pois.map((poi, index) => (
+          <Marker
+            key={index}
+            coordinate={{ latitude: poi.latitude, longitude: poi.longitude }}
+            pinColor="#f093fb"
+            onPress={() => handleMarkerPress(poi)}
+          />
+        ))}
+      </RNMapView>
+
+      {/* POI Detail Modal */}
+      <POIDetailModal
+        poi={selectedPoi}
+        visible={modalVisible}
+        onClose={() => {
+          setModalVisible(false);
+          setSelectedPoi(null);
+        }}
+      />
+    </>
   );
 }
 
@@ -147,83 +177,74 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: '#f0f0f0',
   },
-  calloutContainer: {
+  // Modal styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
     backgroundColor: 'white',
-    borderRadius: 8,
-    padding: 12,
-    minWidth: 200,
-    maxWidth: 280,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
-    elevation: 5,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    maxHeight: '80%',
+    padding: 20,
   },
-  calloutTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    marginBottom: 4,
-    color: '#333',
+  closeButton: {
+    position: 'absolute',
+    top: 15,
+    right: 15,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#f0f0f0',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 10,
   },
-  calloutDescription: {
-    fontSize: 13,
+  closeButtonText: {
+    fontSize: 18,
     color: '#666',
-    lineHeight: 18,
+    fontWeight: 'bold',
   },
-  carouselContainer: {
+  // Image Carousel
+  imageCarouselContainer: {
     position: 'relative',
-    marginBottom: 8,
     width: '100%',
-    height: 120,
+    height: 250,
+    borderRadius: 12,
+    overflow: 'hidden',
+    marginBottom: 16,
   },
   carouselImage: {
     width: '100%',
-    height: 120,
-    borderRadius: 6,
+    height: '100%',
   },
   carouselButton: {
     position: 'absolute',
     top: '50%',
-    transform: [{ translateY: -15 }],
+    marginTop: -22,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     backgroundColor: 'rgba(0,0,0,0.6)',
-    width: 30,
-    height: 30,
-    borderRadius: 15,
     justifyContent: 'center',
     alignItems: 'center',
   },
   carouselButtonLeft: {
-    left: 5,
+    left: 10,
   },
   carouselButtonRight: {
-    right: 5,
+    right: 10,
   },
   carouselButtonText: {
     color: 'white',
-    fontSize: 20,
+    fontSize: 28,
     fontWeight: 'bold',
-  },
-  carouselIndicators: {
-    position: 'absolute',
-    bottom: 5,
-    left: 0,
-    right: 0,
-    flexDirection: 'row',
-    justifyContent: 'center',
-    gap: 4,
-  },
-  carouselDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: 'rgba(255,255,255,0.5)',
-  },
-  carouselDotActive: {
-    backgroundColor: 'white',
   },
   imageCounter: {
     position: 'absolute',
-    bottom: 5,
+    bottom: 10,
     left: 0,
     right: 0,
     alignItems: 'center',
@@ -231,10 +252,25 @@ const styles = StyleSheet.create({
   imageCounterText: {
     backgroundColor: 'rgba(0,0,0,0.6)',
     color: 'white',
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 8,
-    fontSize: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 12,
+    fontSize: 14,
     overflow: 'hidden',
+  },
+  // POI Info
+  poiInfo: {
+    paddingTop: 10,
+  },
+  poiTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 12,
+  },
+  poiDescription: {
+    fontSize: 16,
+    color: '#666',
+    lineHeight: 24,
   },
 });

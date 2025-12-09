@@ -20,6 +20,7 @@
     "expo-constants": "~18.0.10",
     "expo-linear-gradient": "~15.0.8",
     "expo-linking": "~8.0.10",
+    "expo-location": "~19.0.8",
     "expo-router": "~6.0.17",
     "expo-status-bar": "~3.0.9",
     "leaflet": "^1.9.4",

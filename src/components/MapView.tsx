@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
-import { StyleSheet, View, Text, Image, Pressable, Dimensions, Modal, TouchableOpacity, ScrollView, SafeAreaView } from 'react-native';
-import RNMapView, { Marker, Polyline, PROVIDER_GOOGLE } from 'react-native-maps';
+import React, { useState, useEffect } from 'react';
+import { StyleSheet, View, Text, Image, Pressable, Dimensions, Modal, TouchableOpacity, ScrollView, SafeAreaView, Alert } from 'react-native';
+import RNMapView, { Marker, Polyline, PROVIDER_GOOGLE, Circle } from 'react-native-maps';
+import * as Location from 'expo-location';
 import { RouteData, POI } from '../types';
 
 const { width: screenWidth } = Dimensions.get('window');
@@ -93,9 +94,61 @@ interface MapViewProps {
 export default function MapView({ routeData, style }: MapViewProps) {
   const [selectedPoi, setSelectedPoi] = useState<POI | null>(null);
   const [modalVisible, setModalVisible] = useState(false);
+  const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>(null);
+  const [locationError, setLocationError] = useState<string | null>(null);
 
   const waypoints = routeData?.waypoints || routeData?.coordinates || [];
   const pois = routeData?.pois || [];
+
+  // Request location permissions and start tracking
+  useEffect(() => {
+    let locationSubscription: Location.LocationSubscription | null = null;
+
+    async function startLocationTracking() {
+      try {
+        const { status } = await Location.requestForegroundPermissionsAsync();
+        if (status !== 'granted') {
+          setLocationError('Permiso de ubicación denegado');
+          return;
+        }
+
+        // Get initial location
+        const location = await Location.getCurrentPositionAsync({
+          accuracy: Location.Accuracy.High,
+        });
+        setUserLocation({
+          latitude: location.coords.latitude,
+          longitude: location.coords.longitude,
+        });
+
+        // Start watching location
+        locationSubscription = await Location.watchPositionAsync(
+          {
+            accuracy: Location.Accuracy.High,
+            timeInterval: 3000,
+            distanceInterval: 5,
+          },
+          (location) => {
+            setUserLocation({
+              latitude: location.coords.latitude,
+              longitude: location.coords.longitude,
+            });
+          }
+        );
+      } catch (error) {
+        console.error('Location error:', error);
+        setLocationError('Error al obtener ubicación');
+      }
+    }
+
+    startLocationTracking();
+
+    return () => {
+      if (locationSubscription) {
+        locationSubscription.remove();
+      }
+    };
+  }, []);
 
   const handleMarkerPress = (poi: POI) => {
     setSelectedPoi(poi);
@@ -153,6 +206,26 @@ export default function MapView({ routeData, style }: MapViewProps) {
             onPress={() => handleMarkerPress(poi)}
           />
         ))}
+
+        {/* User location marker */}
+        {userLocation && (
+          <>
+            <Circle
+              center={userLocation}
+              radius={50}
+              strokeColor="rgba(66, 133, 244, 0.5)"
+              fillColor="rgba(66, 133, 244, 0.2)"
+            />
+            <Marker
+              coordinate={userLocation}
+              anchor={{ x: 0.5, y: 0.5 }}
+            >
+              <View style={styles.userMarker}>
+                <View style={styles.userMarkerInner} />
+              </View>
+            </Marker>
+          </>
+        )}
       </RNMapView>
 
       {/* POI Detail Modal */}
@@ -272,5 +345,22 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#666',
     lineHeight: 24,
+  },
+  // User location marker
+  userMarker: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: 'rgba(66, 133, 244, 0.3)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  userMarkerInner: {
+    width: 14,
+    height: 14,
+    borderRadius: 7,
+    backgroundColor: '#4285F4',
+    borderWidth: 2,
+    borderColor: 'white',
   },
 });

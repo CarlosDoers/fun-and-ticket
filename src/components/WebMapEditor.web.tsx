@@ -14,6 +14,122 @@ let DefaultIcon = L.icon({
 
 L.Marker.prototype.options.icon = DefaultIcon;
 
+// Image Gallery Component
+function ImageGallery({ images, onRemove }: { images: string[], onRemove?: (index: number) => void }) {
+  const [currentIndex, setCurrentIndex] = useState(0);
+
+  if (!images || images.length === 0) return null;
+
+  const goToPrevious = () => {
+    setCurrentIndex((prev) => (prev === 0 ? images.length - 1 : prev - 1));
+  };
+
+  const goToNext = () => {
+    setCurrentIndex((prev) => (prev === images.length - 1 ? 0 : prev + 1));
+  };
+
+  return (
+    <View style={{ position: 'relative' }}>
+      <img 
+        src={images[currentIndex]} 
+        alt={`POI image ${currentIndex + 1}`}
+        style={{ 
+          width: '100%', 
+          height: 150, 
+          objectFit: 'cover',
+          borderRadius: 4,
+        }}
+        onError={(e) => {
+          (e.target as HTMLImageElement).src = 'https://via.placeholder.com/300x150?text=Error+loading+image';
+        }}
+      />
+      
+      {images.length > 1 && (
+        <>
+          <TouchableOpacity
+            onPress={goToPrevious}
+            style={{
+              position: 'absolute',
+              left: 5,
+              top: '50%',
+              transform: [{ translateY: -15 }],
+              backgroundColor: 'rgba(0,0,0,0.5)',
+              width: 30,
+              height: 30,
+              borderRadius: 15,
+              justifyContent: 'center',
+              alignItems: 'center',
+            }}
+          >
+            <Text style={{ color: 'white', fontSize: 18, fontWeight: 'bold' }}>‹</Text>
+          </TouchableOpacity>
+          
+          <TouchableOpacity
+            onPress={goToNext}
+            style={{
+              position: 'absolute',
+              right: 5,
+              top: '50%',
+              transform: [{ translateY: -15 }],
+              backgroundColor: 'rgba(0,0,0,0.5)',
+              width: 30,
+              height: 30,
+              borderRadius: 15,
+              justifyContent: 'center',
+              alignItems: 'center',
+            }}
+          >
+            <Text style={{ color: 'white', fontSize: 18, fontWeight: 'bold' }}>›</Text>
+          </TouchableOpacity>
+        </>
+      )}
+      
+      {images.length > 1 && (
+        <View style={{ 
+          position: 'absolute', 
+          bottom: 5, 
+          left: 0, 
+          right: 0, 
+          flexDirection: 'row', 
+          justifyContent: 'center',
+          gap: 4,
+        }}>
+          {images.map((_, idx) => (
+            <View
+              key={idx}
+              style={{
+                width: 6,
+                height: 6,
+                borderRadius: 3,
+                backgroundColor: idx === currentIndex ? 'white' : 'rgba(255,255,255,0.5)',
+              }}
+            />
+          ))}
+        </View>
+      )}
+      
+      {onRemove && (
+        <TouchableOpacity
+          onPress={() => onRemove(currentIndex)}
+          style={{
+            position: 'absolute',
+            top: 5,
+            right: 5,
+            backgroundColor: 'rgba(255,0,0,0.7)',
+            width: 24,
+            height: 24,
+            borderRadius: 12,
+            justifyContent: 'center',
+            alignItems: 'center',
+          }}
+        >
+          <Text style={{ color: 'white', fontSize: 14, fontWeight: 'bold' }}>×</Text>
+        </TouchableOpacity>
+      )}
+    </View>
+  );
+}
+
 interface WebMapEditorProps {
   initialRouteData?: RouteData;
   onRouteDataChange: (data: RouteData) => void;
@@ -21,7 +137,10 @@ interface WebMapEditorProps {
 
 function MapEvents({ onMapClick }: { onMapClick: (e: L.LeafletMouseEvent) => void }) {
   useMapEvents({
-    click: onMapClick,
+    contextmenu: (e) => {
+      e.originalEvent.preventDefault(); // Prevent default context menu
+      onMapClick(e);
+    },
   });
   return null;
 }
@@ -44,6 +163,7 @@ export default function WebMapEditor({ initialRouteData, onRouteDataChange }: We
       longitude: e.latlng.lng,
       title: `Point ${pois.length + 1}`,
       description: 'Description here',
+      images: [],
     };
     const newPois = [...pois, newPoi];
     setPois(newPois);
@@ -159,6 +279,26 @@ export default function WebMapEditor({ initialRouteData, onRouteDataChange }: We
     updateParent(waypoints, updatedPois);
   };
 
+  const addImageToPoi = (index: number, imageUrl: string) => {
+    if (!imageUrl.trim()) return;
+    const updatedPois = [...pois];
+    const currentImages = updatedPois[index].images || [];
+    updatedPois[index] = { ...updatedPois[index], images: [...currentImages, imageUrl.trim()] };
+    setPois(updatedPois);
+    updateParent(waypoints, updatedPois);
+  };
+
+  const removeImageFromPoi = (poiIndex: number, imageIndex: number) => {
+    const updatedPois = [...pois];
+    const currentImages = updatedPois[poiIndex].images || [];
+    updatedPois[poiIndex] = { 
+      ...updatedPois[poiIndex], 
+      images: currentImages.filter((_, i) => i !== imageIndex) 
+    };
+    setPois(updatedPois);
+    updateParent(waypoints, updatedPois);
+  };
+
   const deletePoi = (index: number) => {
     const updatedPois = pois.filter((_, i) => i !== index);
     setPois(updatedPois);
@@ -182,7 +322,7 @@ export default function WebMapEditor({ initialRouteData, onRouteDataChange }: We
     <View style={styles.container}>
       <View style={styles.controls}>
         <Text style={styles.instructions}>
-          Click to add POIs. Use arrows to reorder, or click "Optimize & Generate" to auto-optimize.
+          Click derecho para añadir POIs. Usa las flechas para reordenar, o "Optimize & Generate" para auto-optimizar.
         </Text>
         <View style={styles.buttonGroup}>
           <Button 
@@ -252,7 +392,17 @@ export default function WebMapEditor({ initialRouteData, onRouteDataChange }: We
               }}
             >
               <Popup>
-                <View style={{ minWidth: 200 }}>
+                <View style={{ minWidth: 250, maxWidth: 300 }}>
+                  {/* Image gallery */}
+                  {poi.images && poi.images.length > 0 && (
+                    <View style={{ marginBottom: 10 }}>
+                      <ImageGallery 
+                        images={poi.images} 
+                        onRemove={(imgIndex) => removeImageFromPoi(index, imgIndex)}
+                      />
+                    </View>
+                  )}
+                  
                   <TextInput
                     value={poi.title}
                     onChangeText={(text) => updatePoiDetails(index, 'title', text)}
@@ -264,6 +414,22 @@ export default function WebMapEditor({ initialRouteData, onRouteDataChange }: We
                     multiline
                     style={{ width: '100%', height: 60, marginBottom: 5, borderWidth: 1, borderColor: '#eee', padding: 5 }}
                   />
+                  
+                  {/* Add image URL */}
+                  <View style={{ marginBottom: 5 }}>
+                    <TextInput
+                      placeholder="URL de imagen"
+                      style={{ width: '100%', borderWidth: 1, borderColor: '#ddd', padding: 5, marginBottom: 5 }}
+                      onSubmitEditing={(e) => {
+                        addImageToPoi(index, e.nativeEvent.text);
+                        e.currentTarget.clear();
+                      }}
+                    />
+                    <Text style={{ fontSize: 11, color: '#666' }}>
+                      Presiona Enter para añadir
+                    </Text>
+                  </View>
+                  
                   <Button title="Delete POI" onPress={() => deletePoi(index)} color="red" />
                 </View>
               </Popup>

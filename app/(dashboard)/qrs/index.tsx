@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, FlatList, Button, StyleSheet, Alert, Image, Modal, TextInput } from 'react-native';
+import { View, Text, FlatList, Button, StyleSheet, Alert, Image, Modal } from 'react-native';
 import { supabase } from '../../../src/lib/supabase';
 import { QR, Tour } from '../../../src/types';
 

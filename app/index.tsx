@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet, TouchableOpacity, Dimensions, Pressable } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Pressable } from 'react-native';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 
@@ -6,7 +6,6 @@ import { useAuth } from '../src/lib/auth';
 import { supabase } from '../src/lib/supabase';
 
 export default function WelcomeScreen() {
-  console.log('Rendering WelcomeScreen');
   const router = useRouter();
   const { session, isAdmin, isGuide } = useAuth();
 

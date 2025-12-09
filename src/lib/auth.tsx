@@ -59,7 +59,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const checkUserRole = async (userId: string) => {
     try {
-      console.log('Checking role for user:', userId);
+
       const { data, error } = await supabase
         .from('profiles')
         .select('role')
@@ -70,19 +70,19 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         console.error('Error fetching profile:', error);
       }
 
-      console.log('Profile data:', data);
+
 
       if (data) {
         const adminStatus = data.role === 'admin';
         const guideStatus = data.role === 'guide';
-        console.log('Setting roles:', { adminStatus, guideStatus });
+
         setIsAdmin(adminStatus);
         setIsGuide(guideStatus);
       }
     } catch (error) {
       console.error('Error checking user role:', error);
     } finally {
-      console.log('Role check complete, setting loading to false');
+
       setLoading(false);
     }
   };

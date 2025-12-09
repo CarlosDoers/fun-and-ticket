@@ -13,11 +13,13 @@ export type Coordinate = {
 export type POI = Coordinate & {
   title: string;
   description: string;
+  images?: string[]; // URLs de las imágenes
 };
 
 export type RouteData = {
   waypoints: Coordinate[];
   pois: POI[];
+  coordinates?: Coordinate[]; // Legacy support
 };
 
 export type Tour = {

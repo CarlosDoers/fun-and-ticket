@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { Text, View, StyleSheet, Button, Alert, TouchableOpacity } from 'react-native';
 import { CameraView, Camera } from 'expo-camera';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
 import { supabase } from '../src/lib/supabase';
 
 export default function PublicScanScreen() {
   const [hasPermission, setHasPermission] = useState<boolean | null>(null);
   const [scanned, setScanned] = useState(false);
+  const [isReady, setIsReady] = useState(false);
+  const isProcessing = React.useRef(false);
   const router = useRouter();
 
   useEffect(() => {
@@ -18,7 +20,27 @@ export default function PublicScanScreen() {
     getBarCodeScannerPermissions();
   }, []);
 
+  // Reset state when screen comes into focus
+  useFocusEffect(
+    React.useCallback(() => {
+      setScanned(false);
+      isProcessing.current = false;
+      setIsReady(true);
+
+      return () => {
+        setIsReady(false);
+      };
+    }, [])
+  );
+
   const handleBarCodeScanned = async ({ type, data }: { type: string; data: string }) => {
+    if (!isReady || scanned || isProcessing.current) return;
+    
+    console.log('Scanned:', { type, data });
+
+    if (!data) return;
+
+    isProcessing.current = true;
     setScanned(true);
     
     try {
@@ -29,15 +51,19 @@ export default function PublicScanScreen() {
         .single();
 
       if (error || !qrData) {
-        Alert.alert('Código QR Inválido', 'Este código QR no es reconocido.');
+        console.log('QR Lookup Error:', error);
+        Alert.alert('Código QR Inválido', `El código escaneado no es válido.`);
         setScanned(false);
+        isProcessing.current = false;
         return;
       }
 
       router.push(`/map/${qrData.tour_id}`);
     } catch (error) {
+      console.error('Scan Error:', error);
       Alert.alert('Error', 'Algo salió mal al escanear el QR.');
       setScanned(false);
+      isProcessing.current = false;
     }
   };
 
@@ -63,7 +89,8 @@ export default function PublicScanScreen() {
   return (
     <View style={styles.container}>
       <CameraView
-        onBarcodeScanned={scanned ? undefined : handleBarCodeScanned}
+        facing="back"
+        onBarcodeScanned={(scanned || !isReady) ? undefined : handleBarCodeScanned}
         barcodeScannerSettings={{
           barcodeTypes: ["qr"],
         }}
@@ -141,8 +168,8 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   scanArea: {
-    width: 250,
-    height: 250,
+    width: 300,
+    height: 300,
     alignSelf: 'center',
     borderWidth: 3,
     borderColor: '#667eea',

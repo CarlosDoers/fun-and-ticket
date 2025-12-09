@@ -1,5 +1,5 @@
-import React from 'react';
-import { View, StyleSheet, StyleProp, ViewStyle } from 'react-native';
+import React, { useState } from 'react';
+import { View, StyleSheet, StyleProp, ViewStyle, Text, TouchableOpacity } from 'react-native';
 import { MapContainer, TileLayer, Marker, Popup, Polyline } from 'react-leaflet';
 import L from 'leaflet';
 import { RouteData } from '../types';
@@ -14,13 +14,108 @@ let DefaultIcon = L.icon({
 
 L.Marker.prototype.options.icon = DefaultIcon;
 
+// Simple Image Carousel for POI Popup
+function ImageCarousel({ images }: { images: string[] }) {
+  const [currentIndex, setCurrentIndex] = useState(0);
+
+  if (!images || images.length === 0) return null;
+
+  const goToPrevious = () => {
+    setCurrentIndex((prev) => (prev === 0 ? images.length - 1 : prev - 1));
+  };
+
+  const goToNext = () => {
+    setCurrentIndex((prev) => (prev === images.length - 1 ? 0 : prev + 1));
+  };
+
+  return (
+    <View style={{ position: 'relative', marginBottom: 8 }}>
+      <img 
+        src={images[currentIndex]} 
+        alt="POI"
+        style={{ 
+          width: '100%', 
+          height: 120, 
+          objectFit: 'cover',
+          borderRadius: 4,
+        }}
+        onError={(e) => {
+          (e.target as HTMLImageElement).src = 'https://via.placeholder.com/300x120?text=Error';
+        }}
+      />
+      
+      {images.length > 1 && (
+        <>
+          <TouchableOpacity
+            onPress={goToPrevious}
+            style={{
+              position: 'absolute',
+              left: 5,
+              top: '50%',
+              transform: [{ translateY: -15 }],
+              backgroundColor: 'rgba(0,0,0,0.6)',
+              width: 28,
+              height: 28,
+              borderRadius: 14,
+              justifyContent: 'center',
+              alignItems: 'center',
+            }}
+          >
+            <Text style={{ color: 'white', fontSize: 18, fontWeight: 'bold' }}>‹</Text>
+          </TouchableOpacity>
+          
+          <TouchableOpacity
+            onPress={goToNext}
+            style={{
+              position: 'absolute',
+              right: 5,
+              top: '50%',
+              transform: [{ translateY: -15 }],
+              backgroundColor: 'rgba(0,0,0,0.6)',
+              width: 28,
+              height: 28,
+              borderRadius: 14,
+              justifyContent: 'center',
+              alignItems: 'center',
+            }}
+          >
+            <Text style={{ color: 'white', fontSize: 18, fontWeight: 'bold' }}>›</Text>
+          </TouchableOpacity>
+          
+          <View style={{ 
+            position: 'absolute', 
+            bottom: 5, 
+            left: 0, 
+            right: 0, 
+            flexDirection: 'row', 
+            justifyContent: 'center',
+            gap: 4,
+          }}>
+            {images.map((_, idx) => (
+              <View
+                key={idx}
+                style={{
+                  width: 6,
+                  height: 6,
+                  borderRadius: 3,
+                  backgroundColor: idx === currentIndex ? 'white' : 'rgba(255,255,255,0.5)',
+                }}
+              />
+            ))}
+          </View>
+        </>
+      )}
+    </View>
+  );
+}
+
 interface MapViewProps {
   routeData?: RouteData;
   style?: StyleProp<ViewStyle>;
 }
 
 export default function MapView({ routeData, style }: MapViewProps) {
-  const waypoints = routeData?.waypoints || [];
+  const waypoints = routeData?.waypoints || routeData?.coordinates || [];
   const pois = routeData?.pois || [];
 
   const center = waypoints.length > 0 
@@ -44,8 +139,13 @@ export default function MapView({ routeData, style }: MapViewProps) {
             position={[poi.latitude, poi.longitude]}
           >
             <Popup>
-              <strong>{poi.title}</strong><br />
-              {poi.description}
+              <View style={{ minWidth: 200, maxWidth: 250 }}>
+                {poi.images && poi.images.length > 0 && (
+                  <ImageCarousel images={poi.images} />
+                )}
+                <Text style={{ fontWeight: 'bold', fontSize: 14, marginBottom: 4 }}>{poi.title}</Text>
+                <Text style={{ fontSize: 12, color: '#666' }}>{poi.description}</Text>
+              </View>
             </Popup>
           </Marker>
         ))}

@@ -2,9 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, Button, StyleSheet, Alert, ScrollView } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { supabase } from '../../../src/lib/supabase';
-import { useAuth } from '../../../src/lib/auth';
 import WebMapEditor from '../../../src/components/WebMapEditor';
-import { RouteData, Tour } from '../../../src/types';
+import { RouteData } from '../../../src/types';
 
 export default function EditTour() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -13,7 +12,6 @@ export default function EditTour() {
   const [routeData, setRouteData] = useState<RouteData>({ waypoints: [], pois: [] });
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(true);
-  const { user } = useAuth();
   const router = useRouter();
 
   useEffect(() => {

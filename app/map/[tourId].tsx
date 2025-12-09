@@ -21,6 +21,9 @@ export default function PublicMapScreen() {
           .single();
 
         if (error) throw error;
+        
+
+        
         setTour(data);
       } catch (error) {
         console.error('Error fetching tour:', error);
@@ -55,20 +58,35 @@ export default function PublicMapScreen() {
     );
   }
 
-  // const routeData = tour.route_data;
-  const routeData = tour.route_data;
-  const waypoints = routeData?.waypoints || [];
-  const pois = routeData?.pois || [];
+  const routeData = tour.route_data || { waypoints: [], pois: [] };
+  const waypoints = routeData.waypoints || [];
+  const pois = routeData.pois || [];
+
+
 
   // If no route data, show error
   if (waypoints.length === 0) {
     return (
       <View style={styles.container}>
-        <Text style={styles.errorText}>Este tour no tiene una ruta definida.</Text>
-        <Text style={styles.helpText}>Por favor, edita el tour en el dashboard y genera una ruta.</Text>
-        <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-          <Text style={styles.backButtonText}>← Volver</Text>
-        </TouchableOpacity>
+        <View style={styles.errorContainer}>
+          <Text style={styles.errorIcon}>🗺️</Text>
+          <Text style={styles.errorText}>Este tour no tiene una ruta definida</Text>
+          <Text style={styles.helpText}>
+            El administrador necesita editar este tour desde el dashboard y añadir waypoints y puntos de interés en el mapa.
+          </Text>
+          <Text style={styles.debugInfo}>Tour ID: {tour.id}</Text>
+          <Text style={styles.debugInfo}>Nombre: {tour.name}</Text>
+          
+          <View style={styles.buttonContainer}>
+            <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+              <Text style={styles.backButtonText}>← Escanear otro QR</Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity style={styles.homeButton} onPress={() => router.replace('/')}>
+              <Text style={styles.homeButtonText}>🏠 Volver al inicio</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
       </View>
     );
   }
@@ -81,12 +99,21 @@ export default function PublicMapScreen() {
       />
       
       {/* Back button overlay */}
-      <TouchableOpacity 
-        style={styles.backButtonOverlay} 
-        onPress={() => router.back()}
-      >
-        <Text style={styles.backButtonOverlayText}>← Volver</Text>
-      </TouchableOpacity>
+      <View style={styles.topButtonsContainer}>
+        <TouchableOpacity 
+          style={styles.circleButton} 
+          onPress={() => router.back()}
+        >
+          <Text style={styles.buttonIcon}>←</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity 
+          style={styles.circleButton} 
+          onPress={() => router.replace('/')}
+        >
+          <Text style={styles.buttonIcon}>🏠</Text>
+        </TouchableOpacity>
+      </View>
 
       <View style={styles.infoBox}>
         <Text style={styles.tourTitle}>{tour.name}</Text>
@@ -140,47 +167,88 @@ const styles = StyleSheet.create({
     marginTop: 8,
     fontWeight: '600',
   },
+  errorContainer: {
+    alignItems: 'center',
+    padding: 30,
+    maxWidth: 400,
+  },
+  errorIcon: {
+    fontSize: 64,
+    marginBottom: 20,
+  },
   errorText: {
-    fontSize: 18,
-    color: '#666',
-    marginBottom: 10,
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 12,
     textAlign: 'center',
   },
   helpText: {
-    fontSize: 14,
-    color: '#999',
+    fontSize: 15,
+    color: '#666',
     marginBottom: 20,
     textAlign: 'center',
-    paddingHorizontal: 40,
+    lineHeight: 22,
+  },
+  debugInfo: {
+    fontSize: 12,
+    color: '#999',
+    marginBottom: 4,
+    textAlign: 'center',
+  },
+  buttonContainer: {
+    marginTop: 24,
+    gap: 12,
+    width: '100%',
   },
   backButton: {
     backgroundColor: '#667eea',
     paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 8,
+    paddingVertical: 14,
+    borderRadius: 10,
+    alignItems: 'center',
   },
   backButtonText: {
     color: '#fff',
     fontSize: 16,
     fontWeight: 'bold',
   },
-  backButtonOverlay: {
+  homeButton: {
+    backgroundColor: '#f093fb',
+    paddingHorizontal: 24,
+    paddingVertical: 14,
+    borderRadius: 10,
+    alignItems: 'center',
+  },
+  homeButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  topButtonsContainer: {
     position: 'absolute',
     top: 50,
     left: 20,
+    right: 20,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    zIndex: 10,
+  },
+  circleButton: {
     backgroundColor: 'rgba(255, 255, 255, 0.9)',
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 20,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    justifyContent: 'center',
+    alignItems: 'center',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.25,
     shadowRadius: 4,
     elevation: 5,
   },
-  backButtonOverlayText: {
+  buttonIcon: {
+    fontSize: 24,
     color: '#667eea',
-    fontSize: 16,
-    fontWeight: 'bold',
   },
 });

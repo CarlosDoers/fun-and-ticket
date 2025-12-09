@@ -1,5 +1,4 @@
 import { View, Text, Button, StyleSheet, Platform } from 'react-native';
-import { supabase } from '../../src/lib/supabase';
 import { useAuth } from '../../src/lib/auth';
 import { Link, useRouter } from 'expo-router';
 
@@ -27,11 +26,9 @@ export default function DashboardScreen() {
             title="Back to App" 
             color="gray" 
             onPress={() => {
-              console.log('Back to App pressed');
               if (Platform.OS === 'web') {
                 window.location.href = '/';
               } else {
-                // Use navigate instead of replace/push to find the existing route or go to root
                 router.navigate('/');
               }
             }}

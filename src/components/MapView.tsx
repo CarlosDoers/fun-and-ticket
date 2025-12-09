@@ -1,19 +1,19 @@
 import React, { useState } from 'react';
-import { StyleSheet, View, Text, Image, TouchableOpacity, Dimensions } from 'react-native';
+import { StyleSheet, View, Text, Image, Pressable, Dimensions, ScrollView } from 'react-native';
 import RNMapView, { Marker, Polyline, PROVIDER_GOOGLE, Callout } from 'react-native-maps';
 import { RouteData } from '../types';
 
-// Image Carousel Component for POI
+// Image Carousel Component for POI - Simplified for Callout compatibility
 function POIImageCarousel({ images }: { images?: string[] }) {
   const [currentIndex, setCurrentIndex] = useState(0);
 
   if (!images || images.length === 0) return null;
 
-  const goToPrevious = () => {
+  const handlePrevious = () => {
     setCurrentIndex((prev) => (prev === 0 ? images.length - 1 : prev - 1));
   };
 
-  const goToNext = () => {
+  const handleNext = () => {
     setCurrentIndex((prev) => (prev === images.length - 1 ? 0 : prev + 1));
   };
 
@@ -27,30 +27,36 @@ function POIImageCarousel({ images }: { images?: string[] }) {
       
       {images.length > 1 && (
         <>
-          <TouchableOpacity
-            onPress={goToPrevious}
-            style={[styles.carouselButton, styles.carouselButtonLeft]}
+          {/* Using Pressable with larger hitSlop for better touch detection in Callouts */}
+          <Pressable
+            onPress={handlePrevious}
+            style={({ pressed }) => [
+              styles.carouselButton, 
+              styles.carouselButtonLeft,
+              pressed && { opacity: 0.7 }
+            ]}
+            hitSlop={{ top: 15, bottom: 15, left: 15, right: 15 }}
           >
             <Text style={styles.carouselButtonText}>‹</Text>
-          </TouchableOpacity>
+          </Pressable>
           
-          <TouchableOpacity
-            onPress={goToNext}
-            style={[styles.carouselButton, styles.carouselButtonRight]}
+          <Pressable
+            onPress={handleNext}
+            style={({ pressed }) => [
+              styles.carouselButton, 
+              styles.carouselButtonRight,
+              pressed && { opacity: 0.7 }
+            ]}
+            hitSlop={{ top: 15, bottom: 15, left: 15, right: 15 }}
           >
             <Text style={styles.carouselButtonText}>›</Text>
-          </TouchableOpacity>
+          </Pressable>
           
-          <View style={styles.carouselIndicators}>
-            {images.map((_, idx) => (
-              <View
-                key={idx}
-                style={[
-                  styles.carouselDot,
-                  idx === currentIndex && styles.carouselDotActive
-                ]}
-              />
-            ))}
+          {/* Image counter */}
+          <View style={styles.imageCounter}>
+            <Text style={styles.imageCounterText}>
+              {currentIndex + 1} / {images.length}
+            </Text>
           </View>
         </>
       )}
@@ -214,5 +220,21 @@ const styles = StyleSheet.create({
   },
   carouselDotActive: {
     backgroundColor: 'white',
+  },
+  imageCounter: {
+    position: 'absolute',
+    bottom: 5,
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+  },
+  imageCounterText: {
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    color: 'white',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 8,
+    fontSize: 12,
+    overflow: 'hidden',
   },
 });

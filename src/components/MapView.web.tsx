@@ -20,16 +20,20 @@ function ImageCarousel({ images }: { images: string[] }) {
 
   if (!images || images.length === 0) return null;
 
-  const goToPrevious = () => {
+  const goToPrevious = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    e.preventDefault();
     setCurrentIndex((prev) => (prev === 0 ? images.length - 1 : prev - 1));
   };
 
-  const goToNext = () => {
+  const goToNext = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    e.preventDefault();
     setCurrentIndex((prev) => (prev === images.length - 1 ? 0 : prev + 1));
   };
 
   return (
-    <View style={{ position: 'relative', marginBottom: 8 }}>
+    <div style={{ position: 'relative', marginBottom: 8 }}>
       <img 
         src={images[currentIndex]} 
         alt="POI"
@@ -46,53 +50,66 @@ function ImageCarousel({ images }: { images: string[] }) {
       
       {images.length > 1 && (
         <>
-          <TouchableOpacity
-            onPress={goToPrevious}
+          <button
+            onClick={goToPrevious}
             style={{
               position: 'absolute',
               left: 5,
               top: '50%',
-              transform: [{ translateY: -15 }],
+              transform: 'translateY(-50%)',
               backgroundColor: 'rgba(0,0,0,0.6)',
+              color: 'white',
               width: 28,
               height: 28,
               borderRadius: 14,
-              justifyContent: 'center',
+              border: 'none',
+              cursor: 'pointer',
+              fontSize: 18,
+              fontWeight: 'bold',
+              display: 'flex',
               alignItems: 'center',
+              justifyContent: 'center',
             }}
           >
-            <Text style={{ color: 'white', fontSize: 18, fontWeight: 'bold' }}>‹</Text>
-          </TouchableOpacity>
+            ‹
+          </button>
           
-          <TouchableOpacity
-            onPress={goToNext}
+          <button
+            onClick={goToNext}
             style={{
               position: 'absolute',
               right: 5,
               top: '50%',
-              transform: [{ translateY: -15 }],
+              transform: 'translateY(-50%)',
               backgroundColor: 'rgba(0,0,0,0.6)',
+              color: 'white',
               width: 28,
               height: 28,
               borderRadius: 14,
-              justifyContent: 'center',
+              border: 'none',
+              cursor: 'pointer',
+              fontSize: 18,
+              fontWeight: 'bold',
+              display: 'flex',
               alignItems: 'center',
+              justifyContent: 'center',
             }}
           >
-            <Text style={{ color: 'white', fontSize: 18, fontWeight: 'bold' }}>›</Text>
-          </TouchableOpacity>
+            ›
+          </button>
           
-          <View style={{ 
+          <div style={{ 
             position: 'absolute', 
             bottom: 5, 
             left: 0, 
             right: 0, 
+            display: 'flex',
             flexDirection: 'row', 
             justifyContent: 'center',
             gap: 4,
           }}>
             {images.map((_, idx) => (
-              <View
+              <div
                 key={idx}
                 style={{
                   width: 6,
@@ -102,10 +119,10 @@ function ImageCarousel({ images }: { images: string[] }) {
                 }}
               />
             ))}
-          </View>
+          </div>
         </>
       )}
-    </View>
+    </div>
   );
 }
 

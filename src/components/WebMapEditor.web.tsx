@@ -322,34 +322,18 @@ export default function WebMapEditor({ initialRouteData, onRouteDataChange }: We
     <View style={styles.container}>
       <View style={styles.controls}>
         <Text style={styles.instructions}>
-          Click derecho para añadir POIs. Usa las flechas para reordenar, o "Optimize & Generate" para auto-optimizar.
+          📍 Clic derecho en el mapa para añadir puntos de interés (POIs).
         </Text>
-        <View style={styles.buttonGroup}>
-          <Button 
-            title={isGeneratingRoute ? "Generating..." : "Generate Route"} 
-            onPress={() => generateRoute(false)} 
-            disabled={pois.length < 2 || isGeneratingRoute}
-          />
-          <View style={{ width: 10 }} />
-          <Button 
-            title="Optimize & Generate" 
-            onPress={() => generateRoute(true)} 
-            disabled={pois.length < 2 || isGeneratingRoute}
-            color="#2196F3"
-          />
-          <View style={{ width: 10 }} />
-          <Button title="Clear All" onPress={clearAll} color="red" />
-        </View>
         
+        {/* POI List */}
         {pois.length > 0 && (
           <View style={styles.poiList}>
-            <Text style={styles.poiListTitle}>Points ({pois.length}):</Text>
+            <Text style={styles.poiListTitle}>Puntos de Interés ({pois.length}):</Text>
             {pois.map((poi, index) => (
               <View key={index} style={styles.poiItem}>
                 <Text style={styles.poiNumber}>{index + 1}</Text>
                 <Text style={styles.poiTitle} numberOfLines={1}>{poi.title}</Text>
                 <View style={styles.poiButtons}>
-
                   <TouchableOpacity 
                     onPress={() => movePoi(index, 'up')} 
                     disabled={index === 0}
@@ -368,6 +352,35 @@ export default function WebMapEditor({ initialRouteData, onRouteDataChange }: We
             ))}
           </View>
         )}
+
+        {/* Route Generation - Optional */}
+        {pois.length >= 2 && (
+          <View style={styles.routeSection}>
+            <Text style={styles.routeSectionTitle}>🛤️ Generación de Ruta (Opcional)</Text>
+            <Text style={styles.routeSectionDescription}>
+              Si deseas conectar los POIs con una ruta de navegación:
+            </Text>
+            <View style={styles.buttonGroup}>
+              <Button 
+                title={isGeneratingRoute ? "Generando..." : "Generar Ruta"} 
+                onPress={() => generateRoute(false)} 
+                disabled={isGeneratingRoute}
+              />
+              <View style={{ width: 10 }} />
+              <Button 
+                title="Optimizar y Generar" 
+                onPress={() => generateRoute(true)} 
+                disabled={isGeneratingRoute}
+                color="#2196F3"
+              />
+            </View>
+          </View>
+        )}
+
+        {/* Clear Button */}
+        <View style={styles.clearSection}>
+          <Button title="🗑️ Limpiar Todo" onPress={clearAll} color="#f44336" />
+        </View>
       </View>
 
       <View style={styles.mapContainer}>
@@ -443,7 +456,7 @@ export default function WebMapEditor({ initialRouteData, onRouteDataChange }: We
 
 const styles = StyleSheet.create({
   container: {
-    height: 500,
+    height: 650,
     width: '100%',
     borderWidth: 1,
     borderColor: '#ccc',
@@ -456,7 +469,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#f5f5f5',
     borderBottomWidth: 1,
     borderBottomColor: '#ddd',
-    maxHeight: 250,
+    maxHeight: 320,
   },
   instructions: {
     marginBottom: 10,
@@ -465,7 +478,9 @@ const styles = StyleSheet.create({
   },
   buttonGroup: {
     flexDirection: 'row',
-    marginBottom: 10,
+    flexWrap: 'wrap',
+    gap: 8,
+    marginTop: 8,
   },
   poiList: {
     marginTop: 10,
@@ -495,6 +510,28 @@ const styles = StyleSheet.create({
   },
   poiButtons: {
     flexDirection: 'row',
+  },
+  routeSection: {
+    marginTop: 12,
+    padding: 12,
+    backgroundColor: '#f0f8ff',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#b3d4fc',
+  },
+  routeSectionTitle: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#1976d2',
+    marginBottom: 4,
+  },
+  routeSectionDescription: {
+    fontSize: 12,
+    color: '#666',
+    marginBottom: 10,
+  },
+  clearSection: {
+    marginTop: 12,
   },
   mapContainer: {
     flex: 1,

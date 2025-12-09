@@ -6,6 +6,8 @@ import {
 import { useRouter } from 'expo-router';
 import { supabase } from '../../../src/lib/supabase';
 import { Tour } from '../../../src/types';
+import { colors } from '../../../src/lib/theme';
+import { Feather } from '@expo/vector-icons';
 
 export default function POIsToursListScreen() {
   const [tours, setTours] = useState<Tour[]>([]);
@@ -37,7 +39,7 @@ export default function POIsToursListScreen() {
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#667eea" />
+        <ActivityIndicator size="large" color={colors.primary} />
       </View>
     );
   }
@@ -50,7 +52,10 @@ export default function POIsToursListScreen() {
           onPress={() => router.push('/(dashboard)')}
           style={{ marginBottom: 8 }}
         >
-          <Text style={{ color: '#667eea', fontSize: 14, fontWeight: '600' }}>← Volver al Dashboard</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+            <Feather name="arrow-left" size={16} color={colors.primary} />
+            <Text style={{ color: colors.primary, fontSize: 14, fontWeight: '600' }}>Volver al Dashboard</Text>
+          </View>
         </TouchableOpacity>
         <Text style={styles.title}>Puntos de Interés</Text>
         <Text style={styles.subtitle}>Selecciona un tour para editar sus POIs</Text>
@@ -75,15 +80,20 @@ export default function POIsToursListScreen() {
             </View>
             <View style={styles.cardRight}>
               <View style={styles.poiBadge}>
-                <Text style={styles.poiBadgeText}>📍 {getPoiCount(item)}</Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                  <Feather name="map-pin" size={14} color={colors.primary} />
+                  <Text style={styles.poiBadgeText}>{getPoiCount(item)}</Text>
+                </View>
               </View>
-              <Text style={styles.cardArrow}>→</Text>
+              <Feather name="chevron-right" size={20} color={colors.primary} />
             </View>
           </TouchableOpacity>
         )}
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
-            <Text style={styles.emptyIcon}>🗺️</Text>
+            <View style={{ marginBottom: 16 }}>
+              <Feather name="map" size={64} color="#ccc" />
+            </View>
             <Text style={styles.emptyTitle}>No hay tours</Text>
             <Text style={styles.emptyDescription}>
               Primero crea un tour desde "Gestionar Tours"
@@ -158,14 +168,14 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   poiBadge: {
-    backgroundColor: '#fff5f0',
+    backgroundColor: '#f0f0ff',
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 8,
   },
   poiBadgeText: {
     fontSize: 14,
-    color: '#e65100',
+    color: colors.primary,
     fontWeight: '600',
   },
   cardArrow: {

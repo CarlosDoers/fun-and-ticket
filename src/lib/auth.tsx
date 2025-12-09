@@ -30,11 +30,15 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [isAdmin, setIsAdmin] = useState(false);
   const [isGuide, setIsGuide] = useState(false);
 
+  // Use a ref to track the current user ID to avoid stale closures in useEffect
+  const userIdRef = React.useRef<string | undefined>(undefined);
+
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
       if (session?.user) {
+        userIdRef.current = session.user.id;
         checkUserRole(session.user.id);
       } else {
         setLoading(false);
@@ -42,8 +46,20 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      const newUserId = session?.user?.id;
+      
+      // If user ID hasn't changed, just update session data without triggering full reload/role check
+      if (newUserId === userIdRef.current) {
+        setSession(session);
+        setUser(session?.user ?? null);
+        return;
+      }
+
+      // User changed (login, logout, or user switch)
+      userIdRef.current = newUserId;
       setSession(session);
       setUser(session?.user ?? null);
+      
       if (session?.user) {
         setLoading(true); // Ensure loading is true while checking role
         checkUserRole(session.user.id);

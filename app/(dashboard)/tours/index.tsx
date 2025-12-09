@@ -3,6 +3,8 @@ import { View, Text, FlatList, StyleSheet, Alert, TouchableOpacity, ActivityIndi
 import { useRouter } from 'expo-router';
 import { supabase } from '../../../src/lib/supabase';
 import { Tour } from '../../../src/types';
+import { colors } from '../../../src/lib/theme';
+import { Feather } from '@expo/vector-icons';
 
 export default function ToursList() {
   const [tours, setTours] = useState<Tour[]>([]);
@@ -63,7 +65,7 @@ export default function ToursList() {
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#667eea" />
+        <ActivityIndicator size="large" color={colors.primary} />
       </View>
     );
   }
@@ -77,7 +79,10 @@ export default function ToursList() {
             onPress={() => router.push('/(dashboard)')}
             style={{ marginBottom: 8 }}
           >
-            <Text style={{ color: '#667eea', fontSize: 14, fontWeight: '600' }}>← Volver al Dashboard</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+              <Feather name="arrow-left" size={16} color={colors.primary} />
+              <Text style={{ color: colors.primary, fontSize: 14, fontWeight: '600' }}>Volver al Dashboard</Text>
+            </View>
           </TouchableOpacity>
           <Text style={styles.title}>Tours</Text>
           <Text style={styles.subtitle}>{tours.length} tours creados</Text>
@@ -86,7 +91,10 @@ export default function ToursList() {
           style={styles.addButton}
           onPress={() => router.push('/(dashboard)/tours/create')}
         >
-          <Text style={styles.addButtonText}>+ Nuevo</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+            <Feather name="plus" size={16} color="#fff" />
+            <Text style={styles.addButtonText}>Nuevo</Text>
+          </View>
         </TouchableOpacity>
       </View>
 
@@ -106,12 +114,14 @@ export default function ToursList() {
               <View style={styles.badges}>
                 {getPoiCount(item) > 0 && (
                   <View style={styles.badge}>
-                    <Text style={styles.badgeText}>📍 {getPoiCount(item)} POIs</Text>
+                    <Feather name="map-pin" size={10} color={colors.primary} style={{ marginRight: 4 }} />
+                    <Text style={styles.badgeText}>{getPoiCount(item)} POIs</Text>
                   </View>
                 )}
                 {getWaypointCount(item) > 0 && (
                   <View style={[styles.badge, styles.badgeSecondary]}>
-                    <Text style={styles.badgeTextSecondary}>🛤️ {getWaypointCount(item)} puntos</Text>
+                    <Feather name="navigation" size={10} color={colors.accent} style={{ marginRight: 4 }} />
+                    <Text style={styles.badgeTextSecondary}>{getWaypointCount(item)} puntos</Text>
                   </View>
                 )}
               </View>
@@ -126,21 +136,29 @@ export default function ToursList() {
                 style={styles.editButton}
                 onPress={() => router.push(`/(dashboard)/tours/${item.id}`)}
               >
-                <Text style={styles.editButtonText}>✏️ Editar</Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                  <Feather name="edit-2" size={14} color={colors.primary} />
+                  <Text style={styles.editButtonText}>Editar</Text>
+                </View>
               </TouchableOpacity>
               
               <TouchableOpacity
                 style={styles.deleteButton}
                 onPress={() => deleteTour(item.id, item.name)}
               >
-                <Text style={styles.deleteButtonText}>🗑️ Eliminar</Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                  <Feather name="trash-2" size={14} color="#f44336" />
+                  <Text style={styles.deleteButtonText}>Eliminar</Text>
+                </View>
               </TouchableOpacity>
             </View>
           </TouchableOpacity>
         )}
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
-            <Text style={styles.emptyIcon}>🗺️</Text>
+            <View style={{ marginBottom: 16 }}>
+              <Feather name="map" size={64} color="#ccc" />
+            </View>
             <Text style={styles.emptyTitle}>No hay tours</Text>
             <Text style={styles.emptyDescription}>
               Crea tu primer tour para empezar
@@ -190,7 +208,7 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   addButton: {
-    backgroundColor: '#667eea',
+    backgroundColor: colors.primary,
     paddingHorizontal: 20,
     paddingVertical: 12,
     borderRadius: 12,
@@ -239,7 +257,7 @@ const styles = StyleSheet.create({
   },
   badgeText: {
     fontSize: 12,
-    color: '#667eea',
+    color: colors.primary,
     fontWeight: '600',
   },
   badgeSecondary: {
@@ -247,7 +265,7 @@ const styles = StyleSheet.create({
   },
   badgeTextSecondary: {
     fontSize: 12,
-    color: '#f093fb',
+    color: colors.accent,
     fontWeight: '600',
   },
   cardDescription: {
@@ -271,7 +289,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   editButtonText: {
-    color: '#667eea',
+    color: colors.primary,
     fontWeight: '600',
     fontSize: 14,
   },
@@ -307,7 +325,7 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   emptyButton: {
-    backgroundColor: '#667eea',
+    backgroundColor: colors.primary,
     paddingHorizontal: 32,
     paddingVertical: 14,
     borderRadius: 12,

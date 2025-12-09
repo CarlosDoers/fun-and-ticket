@@ -4,6 +4,8 @@ import MapView from '../../src/components/MapView';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { supabase } from '../../src/lib/supabase';
 import { Tour } from '../../src/types';
+import { colors } from '../../src/lib/theme';
+import { Feather } from '@expo/vector-icons';
 
 export default function PublicMapScreen() {
   const { tourId } = useLocalSearchParams();
@@ -42,7 +44,7 @@ export default function PublicMapScreen() {
   if (loading) {
     return (
       <View style={styles.container}>
-        <ActivityIndicator size="large" color="#667eea" />
+        <ActivityIndicator size="large" color={colors.primary} />
       </View>
     );
   }
@@ -52,7 +54,10 @@ export default function PublicMapScreen() {
       <View style={styles.container}>
         <Text style={styles.errorText}>Tour no encontrado.</Text>
         <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-          <Text style={styles.backButtonText}>← Volver</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            <Feather name="arrow-left" size={20} color="#fff" />
+            <Text style={styles.backButtonText}>Volver</Text>
+          </View>
         </TouchableOpacity>
       </View>
     );
@@ -69,7 +74,7 @@ export default function PublicMapScreen() {
     return (
       <View style={styles.container}>
         <View style={styles.errorContainer}>
-          <Text style={styles.errorIcon}>🗺️</Text>
+          <Feather name="map" size={64} color="#ccc" style={{ marginBottom: 20 }} />
           <Text style={styles.errorText}>Este tour no tiene una ruta definida</Text>
           <Text style={styles.helpText}>
             El administrador necesita editar este tour desde el dashboard y añadir waypoints y puntos de interés en el mapa.
@@ -79,11 +84,17 @@ export default function PublicMapScreen() {
           
           <View style={styles.buttonContainer}>
             <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-              <Text style={styles.backButtonText}>← Escanear otro QR</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <Feather name="arrow-left" size={20} color="#fff" />
+                <Text style={styles.backButtonText}>Escanear otro QR</Text>
+              </View>
             </TouchableOpacity>
             
             <TouchableOpacity style={styles.homeButton} onPress={() => router.replace('/')}>
-              <Text style={styles.homeButtonText}>🏠 Volver al inicio</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <Feather name="home" size={20} color="#fff" />
+                <Text style={styles.homeButtonText}>Volver al inicio</Text>
+              </View>
             </TouchableOpacity>
           </View>
         </View>
@@ -104,14 +115,14 @@ export default function PublicMapScreen() {
           style={styles.circleButton} 
           onPress={() => router.back()}
         >
-          <Text style={styles.buttonIcon}>←</Text>
+          <Feather name="arrow-left" size={24} color={colors.primary} />
         </TouchableOpacity>
 
         <TouchableOpacity 
           style={styles.circleButton} 
           onPress={() => router.replace('/')}
         >
-          <Text style={styles.buttonIcon}>🏠</Text>
+          <Feather name="home" size={24} color={colors.primary} />
         </TouchableOpacity>
       </View>
 
@@ -119,7 +130,10 @@ export default function PublicMapScreen() {
         <Text style={styles.tourTitle}>{tour.name}</Text>
         <Text style={styles.tourDescription}>{tour.description}</Text>
         {pois.length > 0 && (
-          <Text style={styles.poiCount}>📍 {pois.length} puntos de interés</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 8 }}>
+            <Feather name="map-pin" size={14} color={colors.primary} style={{ marginRight: 4 }} />
+            <Text style={styles.poiCount}>{pois.length} puntos de interés</Text>
+          </View>
         )}
       </View>
     </View>
@@ -163,8 +177,7 @@ const styles = StyleSheet.create({
   },
   poiCount: {
     fontSize: 14,
-    color: '#667eea',
-    marginTop: 8,
+    color: colors.primary,
     fontWeight: '600',
   },
   errorContainer: {
@@ -202,7 +215,7 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   backButton: {
-    backgroundColor: '#667eea',
+    backgroundColor: colors.primary,
     paddingHorizontal: 24,
     paddingVertical: 14,
     borderRadius: 10,
@@ -214,7 +227,7 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   homeButton: {
-    backgroundColor: '#f093fb',
+    backgroundColor: colors.accent,
     paddingHorizontal: 24,
     paddingVertical: 14,
     borderRadius: 10,
@@ -249,6 +262,6 @@ const styles = StyleSheet.create({
   },
   buttonIcon: {
     fontSize: 24,
-    color: '#667eea',
+    color: colors.primary,
   },
 });

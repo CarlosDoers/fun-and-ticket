@@ -3,6 +3,7 @@ import { View, Text, TextInput, StyleSheet, Alert, TouchableOpacity, KeyboardAvo
 import { supabase } from '../../src/lib/supabase';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
+import { colors } from '../../src/lib/theme';
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -57,7 +58,7 @@ export default function LoginScreen() {
       style={styles.container}
     >
       <LinearGradient
-        colors={['#667eea', '#764ba2', '#f093fb']}
+        colors={[colors.gradientStart, colors.gradientMiddle, colors.gradientEnd]}
         style={styles.gradient}
       >
         <View style={styles.content}>
@@ -191,8 +192,8 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   primaryButton: {
-    backgroundColor: '#667eea',
-    shadowColor: '#667eea',
+    backgroundColor: colors.primary,
+    shadowColor: colors.primary,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
@@ -201,7 +202,7 @@ const styles = StyleSheet.create({
   secondaryButton: {
     backgroundColor: 'transparent',
     borderWidth: 2,
-    borderColor: '#667eea',
+    borderColor: colors.primary,
   },
   buttonText: {
     color: '#fff',
@@ -209,7 +210,7 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   secondaryButtonText: {
-    color: '#667eea',
+    color: colors.primary,
   },
   buttonDisabled: {
     opacity: 0.5,
@@ -219,7 +220,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   homeLinkText: {
-    color: '#667eea',
+    color: colors.primary,
     fontSize: 16,
     fontWeight: '600',
   },

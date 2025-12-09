@@ -8,6 +8,7 @@ import { supabase } from '../../../src/lib/supabase';
 import { useAuth } from '../../../src/lib/auth';
 import WebMapEditor from '../../../src/components/WebMapEditor';
 import { RouteData } from '../../../src/types';
+import { colors } from '../../../src/lib/theme';
 
 export default function CreateTour() {
   const [name, setName] = useState('');
@@ -181,7 +182,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   backButtonText: {
-    color: '#667eea',
+    color: colors.primary,
     fontSize: 16,
     fontWeight: '600',
   },
@@ -252,7 +253,7 @@ const styles = StyleSheet.create({
   },
   badgeText: {
     fontSize: 12,
-    color: '#667eea',
+    color: colors.primary,
     fontWeight: '600',
   },
   routeInfo: {
@@ -277,7 +278,7 @@ const styles = StyleSheet.create({
     marginBottom: 40,
   },
   submitButton: {
-    backgroundColor: '#667eea',
+    backgroundColor: colors.primary,
     borderRadius: 12,
     padding: 18,
     alignItems: 'center',

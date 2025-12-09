@@ -6,6 +6,8 @@ import {
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { supabase } from '../../../src/lib/supabase';
 import { Tour, POI, RouteData } from '../../../src/types';
+import { colors } from '../../../src/lib/theme';
+import { Feather } from '@expo/vector-icons';
 
 export default function TourPOIsScreen() {
   const { tourId } = useLocalSearchParams<{ tourId: string }>();
@@ -191,7 +193,7 @@ export default function TourPOIsScreen() {
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#667eea" />
+        <ActivityIndicator size="large" color={colors.primary} />
       </View>
     );
   }
@@ -204,7 +206,10 @@ export default function TourPOIsScreen() {
           onPress={() => router.push('/(dashboard)/pois')}
           style={{ marginBottom: 8 }}
         >
-          <Text style={{ color: '#667eea', fontSize: 14, fontWeight: '600' }}>← Volver a Tours</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+            <Feather name="arrow-left" size={16} color={colors.primary} />
+            <Text style={{ color: colors.primary, fontSize: 14, fontWeight: '600' }}>Volver a Tours</Text>
+          </View>
         </TouchableOpacity>
         <Text style={styles.title}>{tour?.name}</Text>
         <Text style={styles.subtitle}>{pois.length} puntos de interés</Text>
@@ -233,11 +238,17 @@ export default function TourPOIsScreen() {
               <Text style={styles.cardDescription} numberOfLines={2}>
                 {item.description || 'Sin descripción'}
               </Text>
-              <Text style={styles.cardCoords}>
-                📍 {item.latitude?.toFixed(5)}, {item.longitude?.toFixed(5)}
-              </Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4 }}>
+                <Feather name="map-pin" size={12} color="#999" style={{ marginRight: 4 }} />
+                <Text style={styles.cardCoords}>
+                  {item.latitude?.toFixed(5)}, {item.longitude?.toFixed(5)}
+                </Text>
+              </View>
               {item.images && item.images.length > 0 && (
-                <Text style={styles.imageCount}>🖼️ {item.images.length} imagen(es)</Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4 }}>
+                  <Feather name="image" size={12} color={colors.primary} style={{ marginRight: 4 }} />
+                  <Text style={styles.imageCount}>{item.images.length} imagen(es)</Text>
+                </View>
               )}
             </View>
             
@@ -246,20 +257,23 @@ export default function TourPOIsScreen() {
                 style={styles.editButton}
                 onPress={() => openEditModal(index)}
               >
-                <Text style={styles.editButtonText}>✏️ Editar</Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                  <Feather name="edit-2" size={14} color={colors.primary} />
+                  <Text style={styles.editButtonText}>Editar</Text>
+                </View>
               </TouchableOpacity>
               <TouchableOpacity 
                 style={styles.deleteButton}
                 onPress={() => deletePoi(index)}
               >
-                <Text style={styles.deleteButtonText}>🗑️</Text>
+                <Feather name="trash-2" size={18} color="#f44336" />
               </TouchableOpacity>
             </View>
           </View>
         )}
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
-            <Text style={styles.emptyIcon}>📍</Text>
+            <Feather name="map-pin" size={64} color="#ccc" style={{ marginBottom: 16 }} />
             <Text style={styles.emptyTitle}>No hay POIs</Text>
             <Text style={styles.emptyDescription}>
               Añade puntos de interés desde el editor de mapa del tour
@@ -311,8 +325,8 @@ export default function TourPOIsScreen() {
                   <View key={idx} style={styles.imageRow}>
                     <Image source={{ uri: img }} style={styles.thumbnailImage} />
                     <Text style={styles.imageUrl} numberOfLines={1}>{img.split('/').pop()}</Text>
-                    <TouchableOpacity onPress={() => removeImage(idx)}>
-                      <Text style={styles.removeImageText}>✕</Text>
+                    <TouchableOpacity onPress={() => removeImage(idx)} style={{ padding: 4 }}>
+                      <Feather name="x" size={16} color="#f44336" />
                     </TouchableOpacity>
                   </View>
                 ))}
@@ -335,7 +349,10 @@ export default function TourPOIsScreen() {
                       {uploading ? (
                         <ActivityIndicator size="small" color="#fff" />
                       ) : (
-                        <Text style={styles.uploadButtonText}>📷 Subir Imagen</Text>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                          <Feather name="camera" size={18} color="#fff" />
+                          <Text style={styles.uploadButtonText}>Subir Imagen</Text>
+                        </View>
                       )}
                     </TouchableOpacity>
                     
@@ -353,7 +370,7 @@ export default function TourPOIsScreen() {
                         onPress={addImageUrl}
                         disabled={!newImageUrl.trim()}
                       >
-                        <Text style={styles.addUrlButtonText}>+</Text>
+                        <Feather name="plus" size={24} color="#fff" />
                       </TouchableOpacity>
                     </View>
                   </View>
@@ -435,7 +452,7 @@ const styles = StyleSheet.create({
     width: 28,
     height: 28,
     borderRadius: 14,
-    backgroundColor: '#667eea',
+    backgroundColor: colors.primary,
     justifyContent: 'center',
     alignItems: 'center',
     zIndex: 1,
@@ -472,7 +489,7 @@ const styles = StyleSheet.create({
   },
   imageCount: {
     fontSize: 12,
-    color: '#667eea',
+    color: colors.primary,
     marginTop: 4,
   },
   cardActions: {
@@ -490,7 +507,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   editButtonText: {
-    color: '#667eea',
+    color: colors.primary,
     fontWeight: '600',
   },
   deleteButton: {
@@ -524,7 +541,7 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   goToEditorButton: {
-    backgroundColor: '#667eea',
+    backgroundColor: colors.primary,
     paddingHorizontal: 24,
     paddingVertical: 12,
     borderRadius: 8,
@@ -605,7 +622,7 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   uploadButton: {
-    backgroundColor: '#667eea',
+    backgroundColor: colors.primary,
     padding: 14,
     borderRadius: 8,
     alignItems: 'center',
@@ -634,7 +651,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   modalButtonPrimary: {
-    backgroundColor: '#667eea',
+    backgroundColor: colors.primary,
   },
   modalButtonDisabled: {
     opacity: 0.6,
@@ -666,7 +683,7 @@ const styles = StyleSheet.create({
     marginBottom: 0,
   },
   addUrlButton: {
-    backgroundColor: '#667eea',
+    backgroundColor: colors.primary,
     width: 44,
     height: 44,
     borderRadius: 8,

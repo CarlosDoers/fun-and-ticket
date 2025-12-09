@@ -3,6 +3,7 @@ import { StyleSheet, View, Text, Image, Pressable, Dimensions, Modal, TouchableO
 import RNMapView, { Marker, Polyline, PROVIDER_GOOGLE, Circle } from 'react-native-maps';
 import * as Location from 'expo-location';
 import { RouteData, POI } from '../types';
+import { colors } from '../lib/theme';
 
 const { width: screenWidth } = Dimensions.get('window');
 
@@ -193,7 +194,7 @@ export default function MapView({ routeData, style }: MapViewProps) {
         {/* Route polyline */}
         <Polyline
           coordinates={waypoints.map(w => ({ latitude: w.latitude, longitude: w.longitude }))}
-          strokeColor="#667eea"
+          strokeColor={colors.routeColor}
           strokeWidth={4}
         />
 

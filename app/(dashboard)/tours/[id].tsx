@@ -7,6 +7,7 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { supabase } from '../../../src/lib/supabase';
 import WebMapEditor from '../../../src/components/WebMapEditor';
 import { RouteData } from '../../../src/types';
+import { colors } from '../../../src/lib/theme';
 
 export default function EditTour() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -83,7 +84,7 @@ export default function EditTour() {
   if (fetching) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#667eea" />
+        <ActivityIndicator size="large" color={colors.primary} />
         <Text style={styles.loadingText}>Cargando tour...</Text>
       </View>
     );
@@ -216,7 +217,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   backButtonText: {
-    color: '#667eea',
+    color: colors.primary,
     fontSize: 16,
     fontWeight: '600',
   },
@@ -293,7 +294,7 @@ const styles = StyleSheet.create({
   },
   badgeText: {
     fontSize: 12,
-    color: '#667eea',
+    color: colors.primary,
     fontWeight: '600',
   },
   routeInfo: {
@@ -318,7 +319,7 @@ const styles = StyleSheet.create({
     marginBottom: 40,
   },
   submitButton: {
-    backgroundColor: '#667eea',
+    backgroundColor: colors.primary,
     borderRadius: 12,
     padding: 18,
     alignItems: 'center',

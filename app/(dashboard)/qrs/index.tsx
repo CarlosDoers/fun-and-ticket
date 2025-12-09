@@ -6,6 +6,8 @@ import {
 import { useRouter } from 'expo-router';
 import { supabase } from '../../../src/lib/supabase';
 import { QR, Tour } from '../../../src/types';
+import { colors } from '../../../src/lib/theme';
+import { Feather } from '@expo/vector-icons';
 
 export default function QRsList() {
   const router = useRouter();
@@ -108,7 +110,7 @@ export default function QRsList() {
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#667eea" />
+        <ActivityIndicator size="large" color={colors.primary} />
       </View>
     );
   }
@@ -122,7 +124,10 @@ export default function QRsList() {
             onPress={() => router.push('/(dashboard)')}
             style={{ marginBottom: 8 }}
           >
-            <Text style={{ color: '#667eea', fontSize: 14, fontWeight: '600' }}>← Volver al Dashboard</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+            <Feather name="arrow-left" size={16} color={colors.primary} />
+            <Text style={{ color: colors.primary, fontSize: 14, fontWeight: '600' }}>Volver al Dashboard</Text>
+          </View>
           </TouchableOpacity>
           <Text style={styles.title}>Códigos QR</Text>
           <Text style={styles.subtitle}>{qrs.length} códigos generados</Text>
@@ -131,7 +136,10 @@ export default function QRsList() {
           style={styles.addButton}
           onPress={() => setModalVisible(true)}
         >
-          <Text style={styles.addButtonText}>+ Generar</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+            <Feather name="plus" size={16} color="#fff" />
+            <Text style={styles.addButtonText}>Generar</Text>
+          </View>
         </TouchableOpacity>
       </View>
 
@@ -158,9 +166,12 @@ export default function QRsList() {
               </TouchableOpacity>
               
               <View style={styles.tourBadge}>
-                <Text style={styles.tourBadgeText}>
-                  🗺️ {(item as any).tours?.name || 'Tour desconocido'}
-                </Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
+                  <Feather name="map" size={12} color={colors.primary} style={{ marginRight: 4 }} />
+                  <Text style={styles.tourBadgeText}>
+                    {(item as any).tours?.name || 'Tour desconocido'}
+                  </Text>
+                </View>
               </View>
               
               <View style={styles.statusContainer}>
@@ -175,13 +186,15 @@ export default function QRsList() {
               style={styles.deleteIconButton}
               onPress={() => deleteQR(item.id, item.code)}
             >
-              <Text style={styles.deleteIcon}>🗑️</Text>
+              <Feather name="trash-2" size={18} color="#f44336" />
             </TouchableOpacity>
           </View>
         )}
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
-            <Text style={styles.emptyIcon}>📱</Text>
+            <View style={{ marginBottom: 16 }}>
+              <Feather name="smartphone" size={64} color="#ccc" />
+            </View>
             <Text style={styles.emptyTitle}>No hay códigos QR</Text>
             <Text style={styles.emptyDescription}>
               Genera tu primer código QR para un tour
@@ -229,7 +242,7 @@ export default function QRsList() {
                       {item.name}
                     </Text>
                     {selectedTourId === item.id && (
-                      <Text style={styles.checkmark}>✓</Text>
+                      <Feather name="check" size={18} color={colors.primary} />
                     )}
                   </TouchableOpacity>
                 )}
@@ -296,7 +309,7 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   addButton: {
-    backgroundColor: '#667eea',
+    backgroundColor: colors.primary,
     paddingHorizontal: 20,
     paddingVertical: 12,
     borderRadius: 12,
@@ -357,7 +370,7 @@ const styles = StyleSheet.create({
   },
   tourBadgeText: {
     fontSize: 12,
-    color: '#667eea',
+    color: colors.primary,
     fontWeight: '600',
   },
   statusContainer: {
@@ -408,7 +421,7 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   emptyButton: {
-    backgroundColor: '#667eea',
+    backgroundColor: colors.primary,
     paddingHorizontal: 32,
     paddingVertical: 14,
     borderRadius: 12,
@@ -462,19 +475,19 @@ const styles = StyleSheet.create({
   tourOptionSelected: {
     backgroundColor: '#f0f0ff',
     borderWidth: 2,
-    borderColor: '#667eea',
+    borderColor: colors.primary,
   },
   tourOptionText: {
     fontSize: 16,
     color: '#333',
   },
   tourOptionTextSelected: {
-    color: '#667eea',
+    color: colors.primary,
     fontWeight: 'bold',
   },
   checkmark: {
     fontSize: 18,
-    color: '#667eea',
+    color: colors.primary,
     fontWeight: 'bold',
   },
   noToursContainer: {
@@ -496,7 +509,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   modalButtonPrimary: {
-    backgroundColor: '#667eea',
+    backgroundColor: colors.primary,
   },
   modalButtonPrimaryText: {
     color: '#fff',

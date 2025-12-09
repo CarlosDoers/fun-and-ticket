@@ -3,6 +3,7 @@ import { Text, View, StyleSheet, Button, Alert, TouchableOpacity } from 'react-n
 import { CameraView, Camera } from 'expo-camera';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { supabase } from '../src/lib/supabase';
+import { colors } from '../src/lib/theme';
 
 export default function PublicScanScreen() {
   const [hasPermission, setHasPermission] = useState<boolean | null>(null);
@@ -141,7 +142,7 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   button: {
-    backgroundColor: '#667eea',
+    backgroundColor: colors.primary,
     paddingHorizontal: 24,
     paddingVertical: 12,
     borderRadius: 8,
@@ -172,7 +173,7 @@ const styles = StyleSheet.create({
     height: 300,
     alignSelf: 'center',
     borderWidth: 3,
-    borderColor: '#667eea',
+    borderColor: colors.accent,
     borderRadius: 12,
     backgroundColor: 'transparent',
   },
@@ -184,7 +185,7 @@ const styles = StyleSheet.create({
     gap: 16,
   },
   rescanButton: {
-    backgroundColor: '#667eea',
+    backgroundColor: colors.primary,
     paddingHorizontal: 32,
     paddingVertical: 14,
     borderRadius: 10,

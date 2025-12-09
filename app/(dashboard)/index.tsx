@@ -3,7 +3,9 @@ import { View, Text, StyleSheet, TouchableOpacity, Platform, ScrollView } from '
 import { useAuth } from '../../src/lib/auth';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
+import { Feather } from '@expo/vector-icons';
 import { supabase } from '../../src/lib/supabase';
+import { colors } from '../../src/lib/theme';
 
 export default function DashboardScreen() {
   const { isAdmin, isGuide, signOut, user } = useAuth();
@@ -49,21 +51,23 @@ export default function DashboardScreen() {
   return (
     <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
       <View style={styles.container}>
-        {/* Header */}
+        {/* Header with gradient */}
         <LinearGradient
-          colors={['#667eea', '#764ba2']}
+          colors={[colors.gradientStart, colors.gradientMiddle, colors.gradientEnd]}
           style={styles.header}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
         >
-          <Text style={styles.logo}>🎫</Text>
+          <View style={styles.logoContainer}>
+            <Feather name="compass" size={40} color="white" />
+          </View>
           <Text style={styles.headerTitle}>Fun & Tickets</Text>
           <Text style={styles.headerSubtitle}>
             {isAdmin ? 'Panel de Administración' : 'Panel de Guía'}
           </Text>
         </LinearGradient>
 
-        {/* Stats Cards */}
+        {/* Stats Cards with glassmorphism effect */}
         <View style={styles.statsContainer}>
           <View style={styles.statCard}>
             <Text style={styles.statNumber}>{stats.tours}</Text>
@@ -83,8 +87,8 @@ export default function DashboardScreen() {
               onPress={() => router.push('/(dashboard)/tours')}
               activeOpacity={0.8}
             >
-              <View style={styles.menuIconContainer}>
-                <Text style={styles.menuIcon}>🗺️</Text>
+              <View style={[styles.menuIconContainer, { backgroundColor: '#e2e8f0' }]}>
+                <Feather name="map" size={24} color={colors.primary} />
               </View>
               <View style={styles.menuContent}>
                 <Text style={styles.menuTitle}>Gestionar Tours</Text>
@@ -92,7 +96,7 @@ export default function DashboardScreen() {
                   Crear, editar y eliminar tours turísticos
                 </Text>
               </View>
-              <Text style={styles.menuArrow}>→</Text>
+              <Feather name="chevron-right" size={24} color={colors.primary} />
             </TouchableOpacity>
 
             <TouchableOpacity
@@ -100,8 +104,8 @@ export default function DashboardScreen() {
               onPress={() => router.push('/(dashboard)/pois')}
               activeOpacity={0.8}
             >
-              <View style={[styles.menuIconContainer, { backgroundColor: '#fff5f0' }]}>
-                <Text style={styles.menuIcon}>📍</Text>
+              <View style={[styles.menuIconContainer, { backgroundColor: '#fef3c7' }]}>
+                <Feather name="map-pin" size={24} color={colors.warning} />
               </View>
               <View style={styles.menuContent}>
                 <Text style={styles.menuTitle}>Puntos de Interés</Text>
@@ -109,7 +113,7 @@ export default function DashboardScreen() {
                   Editar información de POIs de cada tour
                 </Text>
               </View>
-              <Text style={styles.menuArrow}>→</Text>
+              <Feather name="chevron-right" size={24} color={colors.primary} />
             </TouchableOpacity>
 
             <TouchableOpacity
@@ -117,8 +121,8 @@ export default function DashboardScreen() {
               onPress={() => router.push('/(dashboard)/qrs')}
               activeOpacity={0.8}
             >
-              <View style={styles.menuIconContainer}>
-                <Text style={styles.menuIcon}>📱</Text>
+              <View style={[styles.menuIconContainer, { backgroundColor: '#dbeafe' }]}>
+                <Feather name="smartphone" size={24} color={colors.info} />
               </View>
               <View style={styles.menuContent}>
                 <Text style={styles.menuTitle}>Gestionar QRs</Text>
@@ -126,7 +130,7 @@ export default function DashboardScreen() {
                   Generar y administrar códigos QR para tours
                 </Text>
               </View>
-              <Text style={styles.menuArrow}>→</Text>
+              <Feather name="chevron-right" size={24} color={colors.primary} />
             </TouchableOpacity>
           </View>
         )}
@@ -137,7 +141,10 @@ export default function DashboardScreen() {
             style={styles.secondaryButton}
             onPress={handleBackToApp}
           >
-            <Text style={styles.secondaryButtonText}>← Volver a la App</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <Feather name="arrow-left" size={20} color={colors.primary} />
+              <Text style={styles.secondaryButtonText}>Volver a la App</Text>
+            </View>
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -158,7 +165,7 @@ export default function DashboardScreen() {
 const styles = StyleSheet.create({
   scrollView: {
     flex: 1,
-    backgroundColor: '#f8f9fa',
+    backgroundColor: colors.background,
   },
   scrollContent: {
     flexGrow: 1,
@@ -172,6 +179,14 @@ const styles = StyleSheet.create({
     paddingTop: 60,
     paddingBottom: 40,
     alignItems: 'center',
+  },
+  logoContainer: {
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    padding: 12,
+    borderRadius: 50,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.3)',
   },
   logo: {
     fontSize: 48,
@@ -195,24 +210,26 @@ const styles = StyleSheet.create({
   },
   statCard: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: 'rgba(255, 255, 255, 0.95)',
     borderRadius: 16,
     padding: 20,
     alignItems: 'center',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
+    shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.1,
-    shadowRadius: 8,
+    shadowRadius: 12,
     elevation: 4,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.5)',
   },
   statNumber: {
     fontSize: 36,
     fontWeight: 'bold',
-    color: '#667eea',
+    color: colors.primary,
   },
   statLabel: {
     fontSize: 14,
-    color: '#666',
+    color: colors.textSecondary,
     marginTop: 4,
   },
   menuContainer: {
@@ -229,21 +246,21 @@ const styles = StyleSheet.create({
     padding: 20,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
+    shadowOpacity: 0.08,
     shadowRadius: 8,
-    elevation: 4,
+    elevation: 3,
   },
   menuIconContainer: {
     width: 56,
     height: 56,
     borderRadius: 16,
-    backgroundColor: '#f0f0ff',
+    backgroundColor: '#f1f5f9',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 16,
   },
   menuIcon: {
-    fontSize: 28,
+    fontSize: 24,
   },
   menuContent: {
     flex: 1,
@@ -251,17 +268,15 @@ const styles = StyleSheet.create({
   menuTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#333',
+    color: colors.textPrimary,
     marginBottom: 4,
   },
   menuDescription: {
     fontSize: 14,
-    color: '#666',
+    color: colors.textSecondary,
   },
   menuArrow: {
-    fontSize: 24,
-    color: '#667eea',
-    fontWeight: 'bold',
+    opacity: 0.5,
   },
   actionsContainer: {
     width: '100%',
@@ -272,13 +287,13 @@ const styles = StyleSheet.create({
   secondaryButton: {
     backgroundColor: '#fff',
     borderWidth: 2,
-    borderColor: '#667eea',
+    borderColor: colors.primary,
     borderRadius: 12,
     padding: 16,
     alignItems: 'center',
   },
   secondaryButtonText: {
-    color: '#667eea',
+    color: colors.primary,
     fontSize: 16,
     fontWeight: '600',
   },
@@ -288,11 +303,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   logoutButtonText: {
-    color: '#999',
+    color: colors.textMuted,
     fontSize: 14,
   },
   userEmail: {
-    color: '#999',
+    color: colors.textMuted,
     fontSize: 12,
     marginTop: 20,
     marginBottom: 40,

@@ -1,9 +1,11 @@
-import { View, Text, StyleSheet, TouchableOpacity, Pressable } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Pressable, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
+import { Feather } from '@expo/vector-icons';
 
 import { useAuth } from '../src/lib/auth';
 import { supabase } from '../src/lib/supabase';
+import { colors } from '../src/lib/theme';
 
 export default function WelcomeScreen() {
   const router = useRouter();
@@ -13,7 +15,6 @@ export default function WelcomeScreen() {
     if (isAdmin || isGuide) {
       router.push('/(dashboard)');
     } else if (session) {
-      // If logged in as normal user, sign out first to allow admin login
       await supabase.auth.signOut();
       router.push('/(auth)/login');
     } else {
@@ -23,17 +24,20 @@ export default function WelcomeScreen() {
 
   return (
     <LinearGradient
-      colors={['#667eea', '#764ba2', '#f093fb']}
+      colors={[colors.gradientStart, colors.gradientMiddle, colors.gradientEnd]}
       style={styles.container}
     >
       <View style={styles.content}>
         <View style={styles.header}>
-          <Text style={styles.logo}>🎫</Text>
+          <View style={styles.logoContainer}>
+            <Feather name="compass" size={64} color="white" />
+          </View>
           <Text style={styles.title}>Fun & Tickets</Text>
           <Text style={styles.subtitle}>Guided Tours & Adventures</Text>
         </View>
 
-        <View style={styles.infoBox}>
+        {/* Glassmorphism info box */}
+        <View style={styles.glassCard}>
           <Text style={styles.welcomeText}>¡Bienvenido!</Text>
           <Text style={styles.description}>
             Descubre experiencias únicas escaneando códigos QR en nuestros tours guiados.
@@ -44,7 +48,7 @@ export default function WelcomeScreen() {
           style={styles.scanButton}
           onPress={() => router.push('/scan')}
         >
-          <Text style={styles.scanButtonIcon}>📱</Text>
+          <Feather name="maximize" size={24} color={colors.primary} style={styles.scanButtonIcon} />
           <Text style={styles.scanButtonText}>Escanear Código QR</Text>
         </TouchableOpacity>
 
@@ -53,8 +57,9 @@ export default function WelcomeScreen() {
           onPress={handleAdminAccess}
         >
           <Text style={styles.adminLinkText}>
-            {isAdmin || isGuide ? 'Ir al Dashboard →' : 'Acceso Administradores →'}
+            {isAdmin || isGuide ? 'Ir al Dashboard' : 'Acceso Administradores'}
           </Text>
+          <Feather name="arrow-right" size={16} color="rgba(255, 255, 255, 0.8)" style={{ marginLeft: 8 }} />
         </Pressable>
       </View>
     </LinearGradient>
@@ -74,6 +79,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 48,
   },
+  logoContainer: {
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    padding: 20,
+    borderRadius: 50,
+    marginBottom: 24,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.3)',
+  },
   logo: {
     fontSize: 80,
     marginBottom: 16,
@@ -92,32 +105,36 @@ const styles = StyleSheet.create({
     color: '#fff',
     opacity: 0.9,
   },
-  infoBox: {
-    backgroundColor: 'rgba(255, 255, 255, 0.95)',
-    borderRadius: 20,
+  // Glassmorphism card
+  glassCard: {
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    borderRadius: 24,
     padding: 28,
     marginBottom: 32,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.25)',
+    ...(Platform.OS === 'web' ? { backdropFilter: 'blur(10px)' } : {}),
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
+    shadowOpacity: 0.2,
+    shadowRadius: 12,
     elevation: 8,
   },
   welcomeText: {
     fontSize: 28,
     fontWeight: 'bold',
-    color: '#333',
+    color: '#fff',
     marginBottom: 12,
     textAlign: 'center',
   },
   description: {
     fontSize: 16,
-    color: '#666',
+    color: 'rgba(255, 255, 255, 0.9)',
     textAlign: 'center',
     lineHeight: 24,
   },
   scanButton: {
-    backgroundColor: '#fff',
+    backgroundColor: 'rgba(255, 255, 255, 0.95)',
     borderRadius: 16,
     padding: 20,
     flexDirection: 'row',
@@ -125,27 +142,27 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
+    shadowOpacity: 0.2,
     shadowRadius: 8,
     elevation: 8,
     marginBottom: 24,
   },
   scanButtonIcon: {
-    fontSize: 32,
     marginRight: 12,
   },
   scanButtonText: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#667eea',
+    color: colors.primary,
   },
   adminLink: {
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     padding: 12,
   },
   adminLinkText: {
-    color: '#fff',
+    color: 'rgba(255, 255, 255, 0.8)',
     fontSize: 14,
-    opacity: 0.8,
   },
 });

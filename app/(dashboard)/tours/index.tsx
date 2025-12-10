@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, FlatList, StyleSheet, Alert, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { View, Text, FlatList, StyleSheet, Alert, TouchableOpacity, ActivityIndicator, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import { supabase } from '../../../src/lib/supabase';
 import { Tour } from '../../../src/types';
@@ -32,6 +32,19 @@ export default function ToursList() {
   }
 
   async function deleteTour(id: string, name: string) {
+    if (Platform.OS === 'web') {
+      if (window.confirm(`¿Estás seguro de que quieres eliminar "${name}"?`)) {
+        try {
+          const { error } = await supabase.from('tours').delete().eq('id', id);
+          if (error) throw error;
+          setTours(tours.filter((t) => t.id !== id));
+        } catch (error: any) {
+          alert(`Error: ${error.message}`);
+        }
+      }
+      return;
+    }
+
     Alert.alert(
       'Eliminar Tour',
       `¿Estás seguro de que quieres eliminar "${name}"?`,

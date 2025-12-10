@@ -294,6 +294,7 @@ type QR = {
   code: string;        // El texto que contiene el QR
   tour_id: string;     // Referencia al tour
   is_active: boolean;
+  expires_at?: string; // Fecha de caducidad (opcional)
   created_at: string;
 };
 ```

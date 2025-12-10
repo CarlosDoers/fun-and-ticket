@@ -36,5 +36,6 @@ export type QR = {
   code: string;
   tour_id: string;
   is_active: boolean;
+  expires_at?: string | null;
   created_at: string;
 };

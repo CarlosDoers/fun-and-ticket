@@ -70,38 +70,6 @@ export default function PublicMapScreen() {
 
 
   // If no route data, show error
-  if (waypoints.length === 0) {
-    return (
-      <View style={styles.container}>
-        <View style={styles.errorContainer}>
-          <Feather name="map" size={64} color="#ccc" style={{ marginBottom: 20 }} />
-          <Text style={styles.errorText}>Este tour no tiene una ruta definida</Text>
-          <Text style={styles.helpText}>
-            El administrador necesita editar este tour desde el dashboard y añadir waypoints y puntos de interés en el mapa.
-          </Text>
-          <Text style={styles.debugInfo}>Tour ID: {tour.id}</Text>
-          <Text style={styles.debugInfo}>Nombre: {tour.name}</Text>
-          
-          <View style={styles.buttonContainer}>
-            <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                <Feather name="arrow-left" size={20} color="#fff" />
-                <Text style={styles.backButtonText}>Escanear otro QR</Text>
-              </View>
-            </TouchableOpacity>
-            
-            <TouchableOpacity style={styles.homeButton} onPress={() => router.replace('/')}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                <Feather name="home" size={20} color="#fff" />
-                <Text style={styles.homeButtonText}>Volver al inicio</Text>
-              </View>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </View>
-    );
-  }
-
   return (
     <View style={styles.container}>
       <MapView
@@ -180,39 +148,35 @@ const styles = StyleSheet.create({
     color: colors.primary,
     fontWeight: '600',
   },
-  errorContainer: {
+  toastContainer: {
+    position: 'absolute',
+    top: 100,
+    left: 0,
+    right: 0,
     alignItems: 'center',
-    padding: 30,
-    maxWidth: 400,
+    zIndex: 20,
   },
-  errorIcon: {
-    fontSize: 64,
-    marginBottom: 20,
+  toast: {
+    backgroundColor: 'rgba(50, 50, 50, 0.9)',
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 25,
+    gap: 8,
   },
+  toastText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  // Restore styles for "Tour not found" state
   errorText: {
     fontSize: 20,
     fontWeight: 'bold',
     color: '#333',
     marginBottom: 12,
     textAlign: 'center',
-  },
-  helpText: {
-    fontSize: 15,
-    color: '#666',
-    marginBottom: 20,
-    textAlign: 'center',
-    lineHeight: 22,
-  },
-  debugInfo: {
-    fontSize: 12,
-    color: '#999',
-    marginBottom: 4,
-    textAlign: 'center',
-  },
-  buttonContainer: {
-    marginTop: 24,
-    gap: 12,
-    width: '100%',
   },
   backButton: {
     backgroundColor: colors.primary,
@@ -222,18 +186,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   backButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  homeButton: {
-    backgroundColor: colors.accent,
-    paddingHorizontal: 24,
-    paddingVertical: 14,
-    borderRadius: 10,
-    alignItems: 'center',
-  },
-  homeButtonText: {
     color: '#fff',
     fontSize: 16,
     fontWeight: 'bold',

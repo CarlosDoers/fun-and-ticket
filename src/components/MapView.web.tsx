@@ -135,8 +135,10 @@ export default function MapView({ routeData, style }: MapViewProps) {
   const waypoints = routeData?.waypoints || routeData?.coordinates || [];
   const pois = routeData?.pois || [];
 
-  const center = waypoints.length > 0 
-    ? [waypoints[0].latitude, waypoints[0].longitude] 
+  const allCoords = [...waypoints, ...pois];
+  
+  const center = allCoords.length > 0 
+    ? [allCoords[0].latitude, allCoords[0].longitude] 
     : [40.416775, -3.703790]; // Default to Madrid
 
   return (

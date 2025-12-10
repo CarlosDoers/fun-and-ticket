@@ -158,6 +158,29 @@ export default function TourPOIsScreen() {
   async function deletePoi(index: number) {
     if (!tour) return;
 
+    if (Platform.OS === 'web') {
+      if (window.confirm(`¿Estás seguro de que quieres eliminar "${pois[index].title}"?`)) {
+        try {
+          const updatedPois = pois.filter((_, i) => i !== index);
+          const newRouteData: RouteData = {
+            ...tour.route_data,
+            pois: updatedPois,
+          };
+
+          const { error } = await supabase
+            .from('tours')
+            .update({ route_data: newRouteData })
+            .eq('id', tourId);
+
+          if (error) throw error;
+          setPois(updatedPois);
+        } catch (error: any) {
+          alert(`Error: ${error.message}`);
+        }
+      }
+      return;
+    }
+
     Alert.alert(
       'Eliminar POI',
       `¿Estás seguro de que quieres eliminar "${pois[index].title}"?`,

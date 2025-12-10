@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
-import { 
-  View, Text, TextInput, StyleSheet, Alert, 
+import { View, Text, TextInput, StyleSheet, Alert, 
   TouchableOpacity, ScrollView, ActivityIndicator 
 } from 'react-native';
 import { useRouter } from 'expo-router';
@@ -9,6 +8,7 @@ import { useAuth } from '../../../src/lib/auth';
 import WebMapEditor from '../../../src/components/WebMapEditor';
 import { RouteData } from '../../../src/types';
 import { colors } from '../../../src/lib/theme';
+import { Feather } from '@expo/vector-icons';
 
 export default function CreateTour() {
   const [name, setName] = useState('');
@@ -72,7 +72,10 @@ export default function CreateTour() {
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.push('/(dashboard)/tours')} style={styles.backButton}>
-          <Text style={styles.backButtonText}>← Volver</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+            <Feather name="arrow-left" size={16} color={colors.primary} />
+            <Text style={styles.backButtonText}>Volver</Text>
+          </View>
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Crear Nuevo Tour</Text>
       </View>
@@ -113,6 +116,7 @@ export default function CreateTour() {
             <Text style={styles.sectionTitle}>Puntos de Interés</Text>
             {poiCount > 0 && (
               <View style={styles.badge}>
+                <Feather name="map-pin" size={12} color={colors.primary} style={{ marginRight: 4 }} />
                 <Text style={styles.badgeText}>{poiCount} POIs</Text>
               </View>
             )}
@@ -125,7 +129,7 @@ export default function CreateTour() {
 
           {hasRoute && (
             <View style={styles.routeInfo}>
-              <Text style={styles.routeInfoIcon}>🛤️</Text>
+              <Feather name="map" size={18} color="#2e7d32" style={{ marginRight: 8 }} />
               <Text style={styles.routeInfoText}>Ruta generada con {routeData.waypoints?.length} puntos</Text>
             </View>
           )}
@@ -263,10 +267,6 @@ const styles = StyleSheet.create({
     padding: 12,
     borderRadius: 8,
     marginBottom: 16,
-  },
-  routeInfoIcon: {
-    fontSize: 18,
-    marginRight: 8,
   },
   routeInfoText: {
     fontSize: 14,

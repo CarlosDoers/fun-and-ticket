@@ -156,40 +156,46 @@ export default function MapView({ routeData, style }: MapViewProps) {
     setModalVisible(true);
   };
 
-  if (waypoints.length === 0) {
-    return (
-      <View style={[styles.map, style, styles.errorContainer]}>
-        <Text>No route data available</Text>
-      </View>
-    );
-  }
-
   // Calculate region to fit all points
   const allCoords = [...waypoints, ...pois];
-  const latitudes = allCoords.map(c => c.latitude);
-  const longitudes = allCoords.map(c => c.longitude);
-  
-  const minLat = Math.min(...latitudes);
-  const maxLat = Math.max(...latitudes);
-  const minLng = Math.min(...longitudes);
-  const maxLng = Math.max(...longitudes);
-  
-  const centerLat = (minLat + maxLat) / 2;
-  const centerLng = (minLng + maxLng) / 2;
-  const latDelta = (maxLat - minLat) * 1.5;
-  const lngDelta = (maxLng - minLng) * 1.5;
+  let region;
+
+  if (allCoords.length > 0) {
+    const latitudes = allCoords.map(c => c.latitude);
+    const longitudes = allCoords.map(c => c.longitude);
+    
+    const minLat = Math.min(...latitudes);
+    const maxLat = Math.max(...latitudes);
+    const minLng = Math.min(...longitudes);
+    const maxLng = Math.max(...longitudes);
+    
+    const centerLat = (minLat + maxLat) / 2;
+    const centerLng = (minLng + maxLng) / 2;
+    const latDelta = (maxLat - minLat) * 1.5;
+    const lngDelta = (maxLng - minLng) * 1.5;
+
+    region = {
+      latitude: centerLat,
+      longitude: centerLng,
+      latitudeDelta: Math.max(latDelta, 0.01),
+      longitudeDelta: Math.max(lngDelta, 0.01),
+    };
+  } else {
+    // Default to Madrid if no points
+    region = {
+      latitude: 40.416775,
+      longitude: -3.703790,
+      latitudeDelta: 0.05,
+      longitudeDelta: 0.05,
+    };
+  }
 
   return (
     <>
       <RNMapView
         style={[styles.map, style]}
         provider={PROVIDER_GOOGLE}
-        initialRegion={{
-          latitude: centerLat,
-          longitude: centerLng,
-          latitudeDelta: Math.max(latDelta, 0.01),
-          longitudeDelta: Math.max(lngDelta, 0.01),
-        }}
+        initialRegion={region}
       >
         {/* Route polyline */}
         <Polyline

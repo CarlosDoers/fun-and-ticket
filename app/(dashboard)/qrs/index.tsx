@@ -17,11 +17,13 @@ export default function QRsList() {
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedTourId, setSelectedTourId] = useState('');
   const [creating, setCreating] = useState(false);
+  const [activeTab, setActiveTab] = useState<'active' | 'inactive'>('active');
+  const [expirationHours, setExpirationHours] = useState<24 | 48 | 72>(24);
 
   useEffect(() => {
     fetchQRs();
     fetchTours();
-  }, []);
+  }, [activeTab]); // Refetch when tab changes might be good, or just filter client-side
 
   async function fetchQRs() {
     try {
@@ -58,15 +60,22 @@ export default function QRsList() {
     setCreating(true);
     try {
       const code = `TOUR-${Math.random().toString(36).substring(7).toUpperCase()}`;
+      
+      // Calculate expiration date
+      const expiresAt = new Date();
+      expiresAt.setHours(expiresAt.getHours() + expirationHours);
+
       const { error } = await supabase.from('qrs').insert({
         code,
         tour_id: selectedTourId,
         is_active: true,
+        expires_at: expiresAt.toISOString(),
       });
 
       if (error) throw error;
       setModalVisible(false);
       setSelectedTourId('');
+      setExpirationHours(24); // Reset default
       fetchQRs();
     } catch (error: any) {
       Alert.alert('Error', error.message);
@@ -76,6 +85,19 @@ export default function QRsList() {
   }
 
   async function deleteQR(id: string, code: string) {
+    if (Platform.OS === 'web') {
+      if (window.confirm(`¿Eliminar el código "${code}"?`)) {
+        try {
+          const { error } = await supabase.from('qrs').delete().eq('id', id);
+          if (error) throw error;
+          setQrs(qrs.filter((q) => q.id !== id));
+        } catch (error: any) {
+          alert(`Error: ${error.message}`);
+        }
+      }
+      return;
+    }
+
     Alert.alert(
       'Eliminar QR',
       `¿Eliminar el código "${code}"?`,
@@ -115,6 +137,27 @@ export default function QRsList() {
     );
   }
 
+  const isExpired = (qr: QR) => {
+    if (!qr.expires_at) return false;
+    return new Date(qr.expires_at) < new Date();
+  };
+
+  // Filter QRs based on active tab
+  const filteredQRs = qrs.filter(qr => {
+    const expired = isExpired(qr);
+    if (activeTab === 'active') {
+      return qr.is_active && !expired;
+    } else {
+      return !qr.is_active || expired;
+    }
+  });
+
+  const getExpirationLabel = (qr: QR) => {
+    if (!qr.expires_at) return 'Sin caducidad';
+    const date = new Date(qr.expires_at);
+    return `Caduca: ${date.toLocaleDateString()} ${date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+  };
+
   return (
     <View style={styles.container}>
       {/* Header */}
@@ -130,7 +173,7 @@ export default function QRsList() {
           </View>
           </TouchableOpacity>
           <Text style={styles.title}>Códigos QR</Text>
-          <Text style={styles.subtitle}>{qrs.length} códigos generados</Text>
+          <Text style={styles.subtitle}>{filteredQRs.length} códigos en esta lista</Text>
         </View>
         <TouchableOpacity
           style={styles.addButton}
@@ -143,9 +186,25 @@ export default function QRsList() {
         </TouchableOpacity>
       </View>
 
+      {/* Tabs */}
+      <View style={styles.tabContainer}>
+        <TouchableOpacity 
+          style={[styles.tab, activeTab === 'active' && styles.activeTab]} 
+          onPress={() => setActiveTab('active')}
+        >
+          <Text style={[styles.tabText, activeTab === 'active' && styles.activeTabText]}>Activos</Text>
+        </TouchableOpacity>
+        <TouchableOpacity 
+          style={[styles.tab, activeTab === 'inactive' && styles.activeTab]} 
+          onPress={() => setActiveTab('inactive')}
+        >
+          <Text style={[styles.tabText, activeTab === 'inactive' && styles.activeTabText]}>Inactivos / Caducados</Text>
+        </TouchableOpacity>
+      </View>
+
       {/* QR List */}
       <FlatList
-        data={qrs}
+        data={filteredQRs}
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.listContent}
         numColumns={Platform.OS === 'web' ? 2 : 1}
@@ -154,9 +213,14 @@ export default function QRsList() {
           <View style={styles.card}>
             <View style={styles.qrImageContainer}>
               <Image
-                style={styles.qrImage}
+                style={[styles.qrImage, isExpired(item) && { opacity: 0.5 }]}
                 source={{ uri: `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${item.code}` }}
               />
+              {isExpired(item) && (
+                <View style={styles.expiredBadge}>
+                  <Text style={styles.expiredText}>CADUCADO</Text>
+                </View>
+              )}
             </View>
             
             <View style={styles.cardContent}>
@@ -175,10 +239,13 @@ export default function QRsList() {
               </View>
               
               <View style={styles.statusContainer}>
-                <View style={[styles.statusDot, item.is_active && styles.statusActive]} />
-                <Text style={styles.statusText}>
-                  {item.is_active ? 'Activo' : 'Inactivo'}
-                </Text>
+                <View style={[styles.statusDot, item.is_active && !isExpired(item) ? styles.statusActive : styles.statusInactive]} />
+                <View>
+                  <Text style={styles.statusText}>
+                    {item.is_active ? (isExpired(item) ? 'Caducado' : 'Activo') : 'Inactivo'}
+                  </Text>
+                  <Text style={styles.expirationText}>{getExpirationLabel(item)}</Text>
+                </View>
               </View>
             </View>
             
@@ -195,16 +262,20 @@ export default function QRsList() {
             <View style={{ marginBottom: 16 }}>
               <Feather name="smartphone" size={64} color="#ccc" />
             </View>
-            <Text style={styles.emptyTitle}>No hay códigos QR</Text>
+            <Text style={styles.emptyTitle}>No hay códigos QR {activeTab === 'active' ? 'activos' : 'inactivos'}</Text>
             <Text style={styles.emptyDescription}>
-              Genera tu primer código QR para un tour
+              {activeTab === 'active' 
+                ? 'Genera un nuevo código para empezar' 
+                : 'Los códigos caducados o desactivados aparecerán aquí'}
             </Text>
-            <TouchableOpacity
-              style={styles.emptyButton}
-              onPress={() => setModalVisible(true)}
-            >
-              <Text style={styles.emptyButtonText}>Generar QR</Text>
-            </TouchableOpacity>
+            {activeTab === 'active' && (
+              <TouchableOpacity
+                style={styles.emptyButton}
+                onPress={() => setModalVisible(true)}
+              >
+                <Text style={styles.emptyButtonText}>Generar QR</Text>
+              </TouchableOpacity>
+            )}
           </View>
         }
       />
@@ -214,8 +285,33 @@ export default function QRsList() {
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <Text style={styles.modalTitle}>Generar Código QR</Text>
-            <Text style={styles.modalSubtitle}>Selecciona un tour para generar su código QR</Text>
+            <Text style={styles.modalSubtitle}>Configura la validez y el tour</Text>
             
+            {/* Expiration Options */}
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Validez del código:</Text>
+              <View style={styles.expirationOptions}>
+                {[24, 48, 72].map((hours) => (
+                  <TouchableOpacity
+                    key={hours}
+                    style={[
+                      styles.expirationOption,
+                      expirationHours === hours && styles.expirationOptionSelected
+                    ]}
+                    onPress={() => setExpirationHours(hours as 24 | 48 | 72)}
+                  >
+                    <Text style={[
+                      styles.expirationOptionText,
+                      expirationHours === hours && styles.expirationOptionTextSelected
+                    ]}>
+                      {hours}h
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+
+            <Text style={styles.label}>Selecciona un tour:</Text>
             {tours.length === 0 ? (
               <View style={styles.noToursContainer}>
                 <Text style={styles.noToursText}>
@@ -319,6 +415,29 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     fontSize: 16,
   },
+  // Tabs
+  tabContainer: {
+    flexDirection: 'row',
+    padding: 20,
+    paddingBottom: 0,
+    gap: 12,
+  },
+  tab: {
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 20,
+    backgroundColor: '#eee',
+  },
+  activeTab: {
+    backgroundColor: colors.primary,
+  },
+  tabText: {
+    color: '#666',
+    fontWeight: '600',
+  },
+  activeTabText: {
+    color: '#fff',
+  },
   listContent: {
     padding: 20,
     gap: 16,
@@ -339,11 +458,26 @@ const styles = StyleSheet.create({
   qrImageContainer: {
     alignItems: 'center',
     marginBottom: 16,
+    position: 'relative',
   },
   qrImage: {
     width: 150,
     height: 150,
     borderRadius: 12,
+  },
+  expiredBadge: {
+    position: 'absolute',
+    top: '40%',
+    backgroundColor: 'rgba(244, 67, 54, 0.9)',
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    transform: [{ rotate: '-15deg' }],
+    borderRadius: 4,
+  },
+  expiredText: {
+    color: '#fff',
+    fontWeight: 'bold',
+    fontSize: 12,
   },
   cardContent: {
     alignItems: 'center',
@@ -375,31 +509,38 @@ const styles = StyleSheet.create({
   },
   statusContainer: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     marginTop: 12,
+    width: '100%',
+    justifyContent: 'center',
   },
   statusDot: {
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: '#ccc',
+    marginTop: 6,
     marginRight: 6,
   },
   statusActive: {
     backgroundColor: '#4CAF50',
   },
+  statusInactive: {
+    backgroundColor: '#ccc',
+  },
   statusText: {
     fontSize: 12,
-    color: '#666',
+    color: '#333',
+    fontWeight: '600',
+  },
+  expirationText: {
+    fontSize: 11,
+    color: '#999',
   },
   deleteIconButton: {
     position: 'absolute',
     top: 12,
     right: 12,
     padding: 8,
-  },
-  deleteIcon: {
-    fontSize: 18,
   },
   emptyContainer: {
     alignItems: 'center',
@@ -419,6 +560,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#666',
     marginBottom: 24,
+    textAlign: 'center',
   },
   emptyButton: {
     backgroundColor: colors.primary,
@@ -460,8 +602,41 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginBottom: 20,
   },
+  inputGroup: {
+    marginBottom: 20,
+  },
+  label: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 12,
+  },
+  expirationOptions: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  expirationOption: {
+    flex: 1,
+    paddingVertical: 10,
+    backgroundColor: '#f8f9fa',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+    alignItems: 'center',
+  },
+  expirationOptionSelected: {
+    backgroundColor: '#f0f0ff',
+    borderColor: colors.primary,
+  },
+  expirationOptionText: {
+    color: '#666',
+    fontWeight: '600',
+  },
+  expirationOptionTextSelected: {
+    color: colors.primary,
+  },
   tourList: {
-    maxHeight: 300,
+    maxHeight: 250,
   },
   tourOption: {
     flexDirection: 'row',
@@ -482,11 +657,6 @@ const styles = StyleSheet.create({
     color: '#333',
   },
   tourOptionTextSelected: {
-    color: colors.primary,
-    fontWeight: 'bold',
-  },
-  checkmark: {
-    fontSize: 18,
     color: colors.primary,
     fontWeight: 'bold',
   },

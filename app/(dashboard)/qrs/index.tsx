@@ -1,13 +1,49 @@
 import React, { useEffect, useState } from 'react';
 import { 
-  View, Text, FlatList, StyleSheet, Alert, Image, Modal, 
-  TouchableOpacity, ActivityIndicator, Platform 
+  Alert, Platform, Dimensions
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { supabase } from '../../../src/lib/supabase';
 import { QR, Tour } from '../../../src/types';
 import { colors } from '../../../src/lib/theme';
 import { Feather } from '@expo/vector-icons';
+
+import { 
+  Box, 
+  Text, 
+  Heading, 
+  Button, 
+  ButtonText, 
+  ButtonIcon,
+  HStack, 
+  VStack, 
+  Spinner,
+  Pressable,
+  Icon,
+  Modal,
+  ModalBackdrop,
+  ModalContent,
+  ModalHeader,
+  ModalCloseButton,
+  ModalBody,
+  ModalFooter,
+  Image,
+  Badge,
+  BadgeText,
+  BadgeIcon,
+  FlatList
+} from '@gluestack-ui/themed';
+
+import { 
+  ArrowLeftIcon, 
+  PlusIcon, 
+  SmartphoneIcon,
+  TrashIcon,
+  CopyIcon,
+  MapIcon,
+  CheckIcon,
+  XIcon
+} from 'lucide-react-native';
 
 export default function QRsList() {
   const router = useRouter();
@@ -23,7 +59,7 @@ export default function QRsList() {
   useEffect(() => {
     fetchQRs();
     fetchTours();
-  }, [activeTab]); // Refetch when tab changes might be good, or just filter client-side
+  }, [activeTab]);
 
   async function fetchQRs() {
     try {
@@ -61,7 +97,6 @@ export default function QRsList() {
     try {
       const code = `TOUR-${Math.random().toString(36).substring(7).toUpperCase()}`;
       
-      // Calculate expiration date
       const expiresAt = new Date();
       expiresAt.setHours(expiresAt.getHours() + expirationHours);
 
@@ -75,7 +110,7 @@ export default function QRsList() {
       if (error) throw error;
       setModalVisible(false);
       setSelectedTourId('');
-      setExpirationHours(24); // Reset default
+      setExpirationHours(24); 
       fetchQRs();
     } catch (error: any) {
       Alert.alert('Error', error.message);
@@ -107,7 +142,8 @@ export default function QRsList() {
           text: 'Eliminar',
           style: 'destructive',
           onPress: async () => {
-            try {
+             // ... duplicate logic handling ...
+             try {
               const { error } = await supabase.from('qrs').delete().eq('id', id);
               if (error) throw error;
               setQrs(qrs.filter((q) => q.id !== id));
@@ -129,20 +165,11 @@ export default function QRsList() {
     }
   };
 
-  if (loading) {
-    return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={colors.primary} />
-      </View>
-    );
-  }
-
   const isExpired = (qr: QR) => {
     if (!qr.expires_at) return false;
     return new Date(qr.expires_at) < new Date();
   };
 
-  // Filter QRs based on active tab
   const filteredQRs = qrs.filter(qr => {
     const expired = isExpired(qr);
     if (activeTab === 'active') {
@@ -158,542 +185,238 @@ export default function QRsList() {
     return `Caduca: ${date.toLocaleDateString()} ${date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
   };
 
+  if (loading) {
+    return (
+      <Box flex={1} justifyContent="center" alignItems="center" bg={colors.background}>
+        <Spinner size="large" color={colors.primary} />
+      </Box>
+    );
+  }
+
   return (
-    <View style={styles.container}>
+    <Box flex={1} bg={colors.background}>
       {/* Header */}
-      <View style={styles.header}>
-        <View>
-          <TouchableOpacity 
-            onPress={() => router.push('/(dashboard)')}
-            style={{ marginBottom: 8 }}
+       <Box 
+        pt="$16" 
+        pb="$5" 
+        px="$5" 
+        bg={colors.surface} 
+        borderBottomWidth={1} 
+        borderBottomColor={colors.border}
+      >
+        <HStack justifyContent="space-between" alignItems="center">
+          <VStack>
+             <Pressable onPress={() => router.push('/(dashboard)')} mb="$2">
+              <HStack alignItems="center" space="xs">
+                <Icon as={ArrowLeftIcon} size="sm" color={colors.primary} />
+                <Text color={colors.primary} fontWeight="$semibold" size="sm">Volver al Dashboard</Text>
+              </HStack>
+            </Pressable>
+            <Heading size="2xl" color={colors.textPrimary}>Códigos QR</Heading>
+            <Text color={colors.textSecondary} size="sm" mt="$1">{filteredQRs.length} códigos en esta lista</Text>
+          </VStack>
+
+          <Button 
+            size="md" 
+            variant="solid" 
+            action="primary" 
+            onPress={() => setModalVisible(true)} 
+            rounded="$xl"
+            bg={colors.brand.orange}
           >
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-            <Feather name="arrow-left" size={16} color={colors.primary} />
-            <Text style={{ color: colors.primary, fontSize: 14, fontWeight: '600' }}>Volver al Dashboard</Text>
-          </View>
-          </TouchableOpacity>
-          <Text style={styles.title}>Códigos QR</Text>
-          <Text style={styles.subtitle}>{filteredQRs.length} códigos en esta lista</Text>
-        </View>
-        <TouchableOpacity
-          style={styles.addButton}
-          onPress={() => setModalVisible(true)}
-        >
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-            <Feather name="plus" size={16} color="#fff" />
-            <Text style={styles.addButtonText}>Generar</Text>
-          </View>
-        </TouchableOpacity>
-      </View>
+             <ButtonIcon as={PlusIcon} mr="$2" color={colors.textOnPrimary} />
+             <ButtonText fontWeight="$bold" color={colors.textOnPrimary}>Generar</ButtonText>
+          </Button>
+        </HStack>
+      </Box>
 
       {/* Tabs */}
-      <View style={styles.tabContainer}>
-        <TouchableOpacity 
-          style={[styles.tab, activeTab === 'active' && styles.activeTab]} 
-          onPress={() => setActiveTab('active')}
-        >
-          <Text style={[styles.tabText, activeTab === 'active' && styles.activeTabText]}>Activos</Text>
-        </TouchableOpacity>
-        <TouchableOpacity 
-          style={[styles.tab, activeTab === 'inactive' && styles.activeTab]} 
-          onPress={() => setActiveTab('inactive')}
-        >
-          <Text style={[styles.tabText, activeTab === 'inactive' && styles.activeTabText]}>Inactivos / Caducados</Text>
-        </TouchableOpacity>
-      </View>
+      <HStack bg={colors.surface} px="$5" borderBottomWidth={1} borderBottomColor={colors.border}>
+         <Pressable 
+           py="$3" mr="$6" 
+           borderBottomWidth={2} 
+           borderBottomColor={activeTab === 'active' ? colors.primary : 'transparent'}
+           onPress={() => setActiveTab('active')}
+         >
+           <Text color={activeTab === 'active' ? colors.primary : colors.textSecondary} fontWeight={activeTab === 'active' ? '$bold' : '$medium'}>Activos</Text>
+         </Pressable>
+         <Pressable 
+           py="$3" 
+           borderBottomWidth={2} 
+           borderBottomColor={activeTab === 'inactive' ? colors.primary : 'transparent'}
+           onPress={() => setActiveTab('inactive')}
+         >
+           <Text color={activeTab === 'inactive' ? colors.primary : colors.textSecondary} fontWeight={activeTab === 'inactive' ? '$bold' : '$medium'}>Inactivos / Caducados</Text>
+         </Pressable>
+      </HStack>
 
       {/* QR List */}
       <FlatList
         data={filteredQRs}
         keyExtractor={(item) => item.id}
-        contentContainerStyle={styles.listContent}
+        contentContainerStyle={{ padding: 20, gap: 16 }}
         numColumns={Platform.OS === 'web' ? 2 : 1}
         key={Platform.OS === 'web' ? 'web' : 'mobile'}
         renderItem={({ item }) => (
-          <View style={styles.card}>
-            <View style={styles.qrImageContainer}>
-              <Image
-                style={[styles.qrImage, isExpired(item) && { opacity: 0.5 }]}
-                source={{ uri: `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${item.code}` }}
-              />
-              {isExpired(item) && (
-                <View style={styles.expiredBadge}>
-                  <Text style={styles.expiredText}>CADUCADO</Text>
-                </View>
-              )}
-            </View>
-            
-            <View style={styles.cardContent}>
-              <TouchableOpacity onPress={() => copyToClipboard(item.code)}>
-                <Text style={styles.codeText}>{item.code}</Text>
-                <Text style={styles.copyHint}>Toca para copiar</Text>
-              </TouchableOpacity>
-              
-              <View style={styles.tourBadge}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
-                  <Feather name="map" size={12} color={colors.primary} style={{ marginRight: 4 }} />
-                  <Text style={styles.tourBadgeText}>
-                    {(item as any).tours?.name || 'Tour desconocido'}
-                  </Text>
-                </View>
-              </View>
-              
-              <View style={styles.statusContainer}>
-                <View style={[styles.statusDot, item.is_active && !isExpired(item) ? styles.statusActive : styles.statusInactive]} />
-                <View>
-                  <Text style={styles.statusText}>
-                    {item.is_active ? (isExpired(item) ? 'Caducado' : 'Activo') : 'Inactivo'}
-                  </Text>
-                  <Text style={styles.expirationText}>{getExpirationLabel(item)}</Text>
-                </View>
-              </View>
-            </View>
-            
-            <TouchableOpacity
-              style={styles.deleteIconButton}
-              onPress={() => deleteQR(item.id, item.code)}
-            >
-              <Feather name="trash-2" size={18} color="#f44336" />
-            </TouchableOpacity>
-          </View>
+           <Box 
+             flex={1} 
+             bg={colors.surface} 
+             p="$4" 
+             rounded="$2xl" 
+             m="$2"
+             borderWidth={1}
+             borderColor={colors.border}
+             maxWidth={Platform.OS === 'web' ? '48%' : '100%'}
+           >
+             <Box alignItems="center" mb="$4" position="relative">
+               {/* QR Image Logic - Using URI still as Gluestack Image supports it */}
+               <Image 
+                  source={{ uri: `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${item.code}` }}
+                  alt="QR Code"
+                  size="xl"
+                  rounded="$lg"
+                  opacity={isExpired(item) ? 0.5 : 1}
+               />
+               {isExpired(item) && (
+                 <Badge action="error" variant="solid" position="absolute" top="40%" transform={[{ rotate: '-15deg' }]}>
+                   <BadgeText>CADUCADO</BadgeText>
+                 </Badge>
+               )}
+             </Box>
+
+             <Box alignItems="center" mb="$4">
+               <Pressable onPress={() => copyToClipboard(item.code)}>
+                 <Heading size="md" color={colors.textPrimary} textAlign="center">{item.code}</Heading>
+                 <HStack alignItems="center" justifyContent="center" space="xs" mt="$1">
+                   <Icon as={CopyIcon} size="xs" color={colors.textMuted} />
+                   <Text size="xs" color={colors.textMuted}>Toca para copiar</Text>
+                 </HStack>
+               </Pressable>
+
+               <HStack bg={colors.background} px="$2" py="$1" rounded="$md" mt="$3" alignItems="center" space="xs" borderWidth={1} borderColor={colors.border}>
+                 <Icon as={MapIcon} size="xs" color={colors.primary} />
+                 <Text size="xs" color={colors.primary} fontWeight="$medium">{(item as any).tours?.name || 'Tour desconocido'}</Text>
+               </HStack>
+
+               <HStack mt="$3" alignItems="center" space="sm">
+                 <Box w={8} h={8} rounded="$full" bg={item.is_active && !isExpired(item) ? '$green500' : colors.textMuted} />
+                 <VStack>
+                    <Text size="sm" fontWeight="$bold" color={colors.textPrimary}>{item.is_active ? (isExpired(item) ? 'Caducado' : 'Activo') : 'Inactivo'}</Text>
+                    <Text size="xs" color={colors.textSecondary}>{getExpirationLabel(item)}</Text>
+                 </VStack>
+               </HStack>
+             </Box>
+
+             <Pressable position="absolute" top={12} right={12} onPress={() => deleteQR(item.id, item.code)}>
+                <Icon as={TrashIcon} color="$red500" size="sm" />
+             </Pressable>
+           </Box>
         )}
         ListEmptyComponent={
-          <View style={styles.emptyContainer}>
-            <View style={{ marginBottom: 16 }}>
-              <Feather name="smartphone" size={64} color="#ccc" />
-            </View>
-            <Text style={styles.emptyTitle}>No hay códigos QR {activeTab === 'active' ? 'activos' : 'inactivos'}</Text>
-            <Text style={styles.emptyDescription}>
+          <Box alignItems="center" py="$16">
+            <Icon as={SmartphoneIcon} size="4xl" color={colors.textMuted} mb="$4" />
+            <Heading size="lg" color={colors.textPrimary} mb="$2">No hay códigos QR {activeTab === 'active' ? 'activos' : 'inactivos'}</Heading>
+            <Text color={colors.textSecondary} mb="$6" textAlign="center">
               {activeTab === 'active' 
                 ? 'Genera un nuevo código para empezar' 
                 : 'Los códigos caducados o desactivados aparecerán aquí'}
             </Text>
             {activeTab === 'active' && (
-              <TouchableOpacity
-                style={styles.emptyButton}
-                onPress={() => setModalVisible(true)}
-              >
-                <Text style={styles.emptyButtonText}>Generar QR</Text>
-              </TouchableOpacity>
+              <Button size="lg" variant="solid" action="primary" onPress={() => setModalVisible(true)} bg={colors.brand.orange}>
+                <ButtonText color={colors.textOnPrimary}>Generar QR</ButtonText>
+              </Button>
             )}
-          </View>
+          </Box>
         }
       />
 
       {/* Create QR Modal */}
-      <Modal visible={modalVisible} animationType="slide" transparent>
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Generar Código QR</Text>
-            <Text style={styles.modalSubtitle}>Configura la validez y el tour</Text>
-            
-            {/* Expiration Options */}
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Validez del código:</Text>
-              <View style={styles.expirationOptions}>
-                {[24, 48, 72].map((hours) => (
-                  <TouchableOpacity
-                    key={hours}
-                    style={[
-                      styles.expirationOption,
-                      expirationHours === hours && styles.expirationOptionSelected
-                    ]}
-                    onPress={() => setExpirationHours(hours as 24 | 48 | 72)}
-                  >
-                    <Text style={[
-                      styles.expirationOptionText,
-                      expirationHours === hours && styles.expirationOptionTextSelected
-                    ]}>
-                      {hours}h
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </View>
+      <Modal
+        isOpen={modalVisible}
+        onClose={() => setModalVisible(false)}
+        finalFocusRef={null}
+      >
+        <ModalBackdrop bg="$backgroundDark900" opacity={0.8} />
+        <ModalContent 
+           width="90%" 
+           maxWidth={400}
+           bg={colors.surface}
+           borderWidth={1}
+           borderColor={colors.border}
+        >
+           <ModalHeader>
+             <Heading size="lg" color={colors.textPrimary}>Generar Código QR</Heading>
+             <ModalCloseButton>
+               <Icon as={XIcon} color={colors.textSecondary} />
+             </ModalCloseButton>
+           </ModalHeader>
+           <ModalBody>
+             <Text size="sm" color={colors.textSecondary} mb="$4">Configura la validez y el tour asociado.</Text>
+             
+             <VStack space="lg">
+                <Box>
+                   <Text fontWeight="$bold" mb="$2" color={colors.textPrimary}>Validez:</Text>
+                   <HStack space="md">
+                      {[24, 48, 72].map((hours) => (
+                        <Pressable 
+                          key={hours} 
+                          flex={1} 
+                          py="$2" 
+                          borderWidth={1} 
+                          borderColor={expirationHours === hours ? colors.borderFocus : colors.border}
+                          bg={expirationHours === hours ? colors.brand.orangeDark : colors.background}
+                          rounded="$md"
+                          alignItems="center"
+                          onPress={() => setExpirationHours(hours as 24 | 48 | 72)}
+                        >
+                           <Text color={expirationHours === hours ? colors.textOnPrimary : colors.textSecondary} fontWeight="$bold">{hours}h</Text>
+                        </Pressable>
+                      ))}
+                   </HStack>
+                </Box>
 
-            <Text style={styles.label}>Selecciona un tour:</Text>
-            {tours.length === 0 ? (
-              <View style={styles.noToursContainer}>
-                <Text style={styles.noToursText}>
-                  No hay tours disponibles. Crea un tour primero.
-                </Text>
-              </View>
-            ) : (
-              <FlatList
-                data={tours}
-                keyExtractor={(item) => item.id}
-                style={styles.tourList}
-                renderItem={({ item }) => (
-                  <TouchableOpacity
-                    style={[
-                      styles.tourOption,
-                      selectedTourId === item.id && styles.tourOptionSelected,
-                    ]}
-                    onPress={() => setSelectedTourId(item.id)}
-                  >
-                    <Text style={[
-                      styles.tourOptionText,
-                      selectedTourId === item.id && styles.tourOptionTextSelected,
-                    ]}>
-                      {item.name}
-                    </Text>
-                    {selectedTourId === item.id && (
-                      <Feather name="check" size={18} color={colors.primary} />
-                    )}
-                  </TouchableOpacity>
-                )}
-              />
-            )}
-            
-            <View style={styles.modalActions}>
-              <TouchableOpacity
-                style={[styles.modalButton, styles.modalButtonPrimary, !selectedTourId && styles.modalButtonDisabled]}
-                onPress={createQR}
-                disabled={!selectedTourId || creating}
-              >
-                <Text style={styles.modalButtonPrimaryText}>
-                  {creating ? 'Generando...' : 'Generar QR'}
-                </Text>
-              </TouchableOpacity>
-              
-              <TouchableOpacity
-                style={[styles.modalButton, styles.modalButtonSecondary]}
-                onPress={() => {
-                  setModalVisible(false);
-                  setSelectedTourId('');
-                }}
-              >
-                <Text style={styles.modalButtonSecondaryText}>Cancelar</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
+                <Box>
+                  <Text fontWeight="$bold" mb="$2" color={colors.textPrimary}>Tour:</Text>
+                   {tours.length === 0 ? (
+                      <Box bg="$amber900" p="$3" rounded="$md" borderColor="$amber700" borderWidth={1}>
+                        <Text color="$amber100" size="sm">No hay tours disponibles. Crea un tour primero.</Text>
+                      </Box>
+                   ) : (
+                      <Box h={200} borderWidth={1} borderColor={colors.border} rounded="$md" bg={colors.background}>
+                        <FlatList 
+                          data={tours}
+                          keyExtractor={(item) => item.id}
+                          renderItem={({item}) => (
+                             <Pressable 
+                               p="$3" 
+                               borderBottomWidth={1} 
+                               borderBottomColor={colors.border}
+                               bg={selectedTourId === item.id ? colors.brand.orangeDark : colors.background}
+                               onPress={() => setSelectedTourId(item.id)}
+                               flexDirection="row"
+                               justifyContent="space-between"
+                               alignItems="center"
+                             >
+                                <Text color={selectedTourId === item.id ? colors.textOnPrimary : colors.textPrimary} fontWeight={selectedTourId === item.id ? '$bold' : '$normal'}>{item.name}</Text>
+                                {selectedTourId === item.id && <Icon as={CheckIcon} color={colors.textOnPrimary} size="sm" />}
+                             </Pressable>
+                          )}
+                        />
+                      </Box>
+                   )}
+                </Box>
+             </VStack>
+           </ModalBody>
+           <ModalFooter>
+             <Button variant="outline" action="secondary" onPress={() => setModalVisible(false)} mr="$3" borderColor={colors.border}>
+               <ButtonText color={colors.textSecondary}>Cancelar</ButtonText>
+             </Button>
+             <Button action="primary" onPress={createQR} isDisabled={!selectedTourId || creating} bg={colors.brand.orange}>
+               <ButtonText color={colors.textOnPrimary}>{creating ? 'Generando...' : 'Generar QR'}</ButtonText>
+             </Button>
+           </ModalFooter>
+        </ModalContent>
       </Modal>
-    </View>
+    </Box>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#f8f9fa',
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#f8f9fa',
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 20,
-    paddingTop: 60,
-    backgroundColor: '#fff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#eee',
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#333',
-  },
-  subtitle: {
-    fontSize: 14,
-    color: '#666',
-    marginTop: 2,
-  },
-  addButton: {
-    backgroundColor: colors.primary,
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    borderRadius: 12,
-  },
-  addButtonText: {
-    color: '#fff',
-    fontWeight: 'bold',
-    fontSize: 16,
-  },
-  // Tabs
-  tabContainer: {
-    flexDirection: 'row',
-    padding: 20,
-    paddingBottom: 0,
-    gap: 12,
-  },
-  tab: {
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    borderRadius: 20,
-    backgroundColor: '#eee',
-  },
-  activeTab: {
-    backgroundColor: colors.primary,
-  },
-  tabText: {
-    color: '#666',
-    fontWeight: '600',
-  },
-  activeTabText: {
-    color: '#fff',
-  },
-  listContent: {
-    padding: 20,
-    gap: 16,
-  },
-  card: {
-    flex: 1,
-    backgroundColor: '#fff',
-    borderRadius: 16,
-    padding: 16,
-    margin: 8,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    elevation: 3,
-    maxWidth: Platform.OS === 'web' ? '48%' : '100%',
-  },
-  qrImageContainer: {
-    alignItems: 'center',
-    marginBottom: 16,
-    position: 'relative',
-  },
-  qrImage: {
-    width: 150,
-    height: 150,
-    borderRadius: 12,
-  },
-  expiredBadge: {
-    position: 'absolute',
-    top: '40%',
-    backgroundColor: 'rgba(244, 67, 54, 0.9)',
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-    transform: [{ rotate: '-15deg' }],
-    borderRadius: 4,
-  },
-  expiredText: {
-    color: '#fff',
-    fontWeight: 'bold',
-    fontSize: 12,
-  },
-  cardContent: {
-    alignItems: 'center',
-  },
-  codeText: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#333',
-    textAlign: 'center',
-    fontFamily: Platform.OS === 'web' ? 'monospace' : undefined,
-  },
-  copyHint: {
-    fontSize: 11,
-    color: '#999',
-    marginTop: 2,
-    textAlign: 'center',
-  },
-  tourBadge: {
-    backgroundColor: '#f0f0ff',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 8,
-    marginTop: 12,
-  },
-  tourBadgeText: {
-    fontSize: 12,
-    color: colors.primary,
-    fontWeight: '600',
-  },
-  statusContainer: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    marginTop: 12,
-    width: '100%',
-    justifyContent: 'center',
-  },
-  statusDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    marginTop: 6,
-    marginRight: 6,
-  },
-  statusActive: {
-    backgroundColor: '#4CAF50',
-  },
-  statusInactive: {
-    backgroundColor: '#ccc',
-  },
-  statusText: {
-    fontSize: 12,
-    color: '#333',
-    fontWeight: '600',
-  },
-  expirationText: {
-    fontSize: 11,
-    color: '#999',
-  },
-  deleteIconButton: {
-    position: 'absolute',
-    top: 12,
-    right: 12,
-    padding: 8,
-  },
-  emptyContainer: {
-    alignItems: 'center',
-    paddingVertical: 60,
-  },
-  emptyIcon: {
-    fontSize: 64,
-    marginBottom: 16,
-  },
-  emptyTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 8,
-  },
-  emptyDescription: {
-    fontSize: 14,
-    color: '#666',
-    marginBottom: 24,
-    textAlign: 'center',
-  },
-  emptyButton: {
-    backgroundColor: colors.primary,
-    paddingHorizontal: 32,
-    paddingVertical: 14,
-    borderRadius: 12,
-  },
-  emptyButtonText: {
-    color: '#fff',
-    fontWeight: 'bold',
-    fontSize: 16,
-  },
-  // Modal Styles
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
-  },
-  modalContent: {
-    backgroundColor: '#fff',
-    borderRadius: 20,
-    padding: 24,
-    width: '100%',
-    maxWidth: 400,
-    maxHeight: '80%',
-  },
-  modalTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#333',
-    textAlign: 'center',
-    marginBottom: 4,
-  },
-  modalSubtitle: {
-    fontSize: 14,
-    color: '#666',
-    textAlign: 'center',
-    marginBottom: 20,
-  },
-  inputGroup: {
-    marginBottom: 20,
-  },
-  label: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#333',
-    marginBottom: 12,
-  },
-  expirationOptions: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  expirationOption: {
-    flex: 1,
-    paddingVertical: 10,
-    backgroundColor: '#f8f9fa',
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
-    alignItems: 'center',
-  },
-  expirationOptionSelected: {
-    backgroundColor: '#f0f0ff',
-    borderColor: colors.primary,
-  },
-  expirationOptionText: {
-    color: '#666',
-    fontWeight: '600',
-  },
-  expirationOptionTextSelected: {
-    color: colors.primary,
-  },
-  tourList: {
-    maxHeight: 250,
-  },
-  tourOption: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: 16,
-    borderRadius: 12,
-    backgroundColor: '#f8f9fa',
-    marginBottom: 8,
-  },
-  tourOptionSelected: {
-    backgroundColor: '#f0f0ff',
-    borderWidth: 2,
-    borderColor: colors.primary,
-  },
-  tourOptionText: {
-    fontSize: 16,
-    color: '#333',
-  },
-  tourOptionTextSelected: {
-    color: colors.primary,
-    fontWeight: 'bold',
-  },
-  noToursContainer: {
-    padding: 20,
-    alignItems: 'center',
-  },
-  noToursText: {
-    fontSize: 14,
-    color: '#666',
-    textAlign: 'center',
-  },
-  modalActions: {
-    marginTop: 20,
-    gap: 12,
-  },
-  modalButton: {
-    padding: 16,
-    borderRadius: 12,
-    alignItems: 'center',
-  },
-  modalButtonPrimary: {
-    backgroundColor: colors.primary,
-  },
-  modalButtonPrimaryText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  modalButtonSecondary: {
-    backgroundColor: 'transparent',
-  },
-  modalButtonSecondaryText: {
-    color: '#666',
-    fontSize: 16,
-  },
-  modalButtonDisabled: {
-    backgroundColor: '#ccc',
-  },
-});

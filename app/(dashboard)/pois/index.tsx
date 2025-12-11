@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { 
-  View, Text, StyleSheet, TouchableOpacity, ActivityIndicator,
-  FlatList, Alert, Image, Dimensions, TextInput, Platform
+  Alert, Image, Dimensions, Platform
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { supabase } from '../../../src/lib/supabase';
@@ -10,37 +9,66 @@ import { colors } from '../../../src/lib/theme';
 import { Feather } from '@expo/vector-icons';
 import WebMapEditor from '../../../src/components/WebMapEditor';
 import * as DocumentPicker from 'expo-document-picker';
-import { Buffer } from 'buffer';
+
+import { 
+  Box, 
+  Text, 
+  Heading, 
+  Button, 
+  ButtonText, 
+  ButtonIcon,
+  HStack, 
+  VStack, 
+  Spinner,
+  Pressable,
+  Icon,
+  Input,
+  InputField,
+  Textarea,
+  TextareaInput,
+  Modal,
+  ModalBackdrop,
+  ModalContent,
+  ModalHeader,
+  ModalCloseButton,
+  ModalBody,
+  ModalFooter,
+  FormControl,
+  FormControlLabel,
+  FormControlLabelText,
+  FlatList
+} from '@gluestack-ui/themed';
+
+import { 
+  ArrowLeftIcon, 
+  MapIcon, 
+  ListIcon, 
+  Edit2Icon, 
+  TrashIcon, 
+  MapPinIcon, 
+  UploadIcon, 
+  XIcon 
+} from 'lucide-react-native';
 
 const { width } = Dimensions.get('window');
 
 // Helper to upload image to Supabase
 async function uploadImageToSupabase(uri: string): Promise<string | null> {
   try {
-    // 1. Read file logic (Web vs Native)
-    let fileData: ArrayBuffer | Buffer;
+    let fileData: ArrayBuffer | Blob;
     let fileName = '';
-    let contentType = 'image/jpeg'; // Default
+    let contentType = 'image/jpeg'; 
 
     if (Platform.OS === 'web') {
-      // On web, uri is a blob url or base64. 
-      // Ideally we get the File object directly from DocumentPicker if available, 
-      // but expo-document-picker on web returns a File object in `output`. 
-      // However, here we might need to fetch the blob if we only have URI.
-      // Let's rely on standard fetch for blob.
       const response = await fetch(uri);
       const blob = await response.blob();
-      fileData = await blob.arrayBuffer();
+      fileData = blob; 
       fileName = `poi_${Date.now()}.jpg`; 
       contentType = blob.type;
     } else {
-      // Native (Not implemented fully in this snippet, assuming Web focus based on user activity)
-      // Standard ReadAsStringAsync with base64 could work for small files.
-      // But for now let's focus on the Web logic as per current running context.
       return null; 
     }
 
-    // 2. Upload
     const { data, error } = await supabase.storage
       .from('images')
       .upload(fileName, fileData, {
@@ -50,7 +78,6 @@ async function uploadImageToSupabase(uri: string): Promise<string | null> {
 
     if (error) throw error;
 
-    // 3. Get Public URL
     const { data: { publicUrl } } = supabase.storage
       .from('images')
       .getPublicUrl(data.path);
@@ -62,25 +89,39 @@ async function uploadImageToSupabase(uri: string): Promise<string | null> {
   }
 }
 
-// --- TABS COMPONENT ---
 function Tabs({ activeTab, onTabChange }) {
   return (
-    <View style={styles.tabsContainer}>
-      <TouchableOpacity 
-        style={[styles.tab, activeTab === 'map' && styles.activeTab]} 
+    <HStack bg={colors.background} borderBottomWidth={1} borderBottomColor={colors.border}>
+      <Pressable 
+        flex={1} 
+        py="$4" 
+        alignItems="center" 
+        borderBottomWidth={2} 
+        bg={colors.surface}
+        borderBottomColor={activeTab === 'map' ? colors.primary : 'transparent'}
         onPress={() => onTabChange('map')}
       >
-        <Feather name="map" size={18} color={activeTab === 'map' ? colors.primary : '#666'} />
-        <Text style={[styles.tabText, activeTab === 'map' && styles.activeTabText]}>Crear en Mapa</Text>
-      </TouchableOpacity>
-      <TouchableOpacity 
-        style={[styles.tab, activeTab === 'list' && styles.activeTab]} 
+        <HStack space="xs" alignItems="center">
+          <Icon as={MapIcon} color={activeTab === 'map' ? colors.primary : colors.textSecondary} size="sm" />
+          <Text color={activeTab === 'map' ? colors.primary : colors.textSecondary} fontWeight={activeTab === 'map' ? '$bold' : '$medium'}>Crear en Mapa</Text>
+        </HStack>
+      </Pressable>
+      
+      <Pressable 
+        flex={1} 
+        py="$4" 
+        alignItems="center" 
+        borderBottomWidth={2} 
+        bg={colors.surface}
+        borderBottomColor={activeTab === 'list' ? colors.primary : 'transparent'}
         onPress={() => onTabChange('list')}
       >
-        <Feather name="list" size={18} color={activeTab === 'list' ? colors.primary : '#666'} />
-        <Text style={[styles.tabText, activeTab === 'list' && styles.activeTabText]}>Ver Listado</Text>
-      </TouchableOpacity>
-    </View>
+        <HStack space="xs" alignItems="center">
+           <Icon as={ListIcon} color={activeTab === 'list' ? colors.primary : colors.textSecondary} size="sm" />
+           <Text color={activeTab === 'list' ? colors.primary : colors.textSecondary} fontWeight={activeTab === 'list' ? '$bold' : '$medium'}>Ver Listado</Text>
+        </HStack>
+      </Pressable>
+    </HStack>
   );
 }
 
@@ -90,15 +131,13 @@ export default function POIManagementScreen() {
   const [pois, setPois] = useState<POI[]>([]);
   const [loading, setLoading] = useState(false);
 
-  // Map Editor State (for creating new POI)
-  const [newPoiLocation, setNewPoiLocation] = useState<{lat: number, lng: number} | null>(null);
-
   // Edit State
   const [editingPoi, setEditingPoi] = useState<POI | null>(null);
   const [showEditModal, setShowEditModal] = useState(false);
   const [editTitle, setEditTitle] = useState('');
   const [editDesc, setEditDesc] = useState('');
   const [editImages, setEditImages] = useState<string[]>([]);
+  const [uploading, setUploading] = useState(false);
 
   useEffect(() => {
     if (activeTab === 'list') {
@@ -118,7 +157,6 @@ export default function POIManagementScreen() {
     setLoading(false);
   }
 
-  // Handle saving a new POI from the Map
   async function handleCreatePoi(poiData: any) {
     if (!poiData || !poiData.location) return;
     
@@ -135,7 +173,7 @@ export default function POIManagementScreen() {
       Alert.alert('Error', 'No se pudo crear el POI: ' + error.message);
     } else {
       Alert.alert('Éxito', 'Punto de interés creado correctamente.');
-      setActiveTab('list'); // Switch to list view to see it
+      setActiveTab('list'); 
     }
     setLoading(false);
   }
@@ -144,8 +182,6 @@ export default function POIManagementScreen() {
      if (Platform.OS === 'web') {
         const confirm = window.confirm('¿Estás seguro de eliminar este POI? Se quitará de todos los tours.');
         if (!confirm) return;
-     } else {
-       // Native alert logic if needed
      }
 
      const { error } = await supabase.from('pois').delete().eq('id', id);
@@ -186,384 +222,197 @@ export default function POIManagementScreen() {
   };
 
   return (
-    <View style={styles.container}>
+    <Box flex={1} bg={colors.background}>
       {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity 
-          onPress={() => router.push('/(dashboard)')}
-          style={{ marginBottom: 16 }}
-        >
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-            <Feather name="arrow-left" size={20} color={colors.primary} />
-            <Text style={{ color: colors.primary, fontSize: 16, fontWeight: '600' }}>Volver</Text>
-          </View>
-        </TouchableOpacity>
-        <Text style={styles.title}>Gestión de Puntos de Interés</Text>
-      </View>
+      <Box 
+        pt="$16" 
+        pb="$5" 
+        px="$5" 
+        bg={colors.surface} 
+        borderBottomWidth={1}
+        borderBottomColor={colors.border}
+      >
+        <Pressable onPress={() => router.push('/(dashboard)')} mb="$4">
+          <HStack alignItems="center" space="xs">
+            <Icon as={ArrowLeftIcon} size="sm" color={colors.primary} />
+            <Text color={colors.primary} fontWeight="$semibold" size="sm">Volver</Text>
+          </HStack>
+        </Pressable>
+        <Heading size="xl" color={colors.textPrimary}>Gestión de Puntos de Interés</Heading>
+      </Box>
 
       <Tabs activeTab={activeTab} onTabChange={setActiveTab} />
 
       {activeTab === 'map' ? (
-        <View style={styles.mapContainer}>
-          <Text style={styles.hint}>
-            Haz clic en el mapa para situar un nuevo POI y guárdalo.
-          </Text>
+        <Box flex={1}>
+          <Box bg={colors.surface} p="$2" alignItems="center" borderBottomWidth={1} borderColor={colors.border}>
+            <Text color={colors.brand.orange} size="sm">Haz clic en el mapa para situar un nuevo POI y guárdalo.</Text>
+          </Box>
            <WebMapEditor 
              apiKey="" 
-             initialRoute={{ waypoints: [], pois: [] }} // Empty initial state
-             onSaveRoute={() => {}} // We don't save routes here
-             onSavePoi={(poi) => handleCreatePoi(poi)} // This is what we need
-             mode="poi-only" // We might need to implement this prop in WebMapEditor if it implies hiding route tools
+             initialRoute={{ waypoints: [], pois: [] }} 
+             onSaveRoute={() => {}} 
+             onSavePoi={(poi) => handleCreatePoi(poi)} 
+             mode="poi-only" 
            />
-        </View>
+        </Box>
       ) : (
-        <View style={styles.listContainer}>
+        <Box flex={1}>
           {loading ? (
-            <ActivityIndicator size="large" color={colors.primary} style={{ marginTop: 40 }} />
+             <Box flex={1} justifyContent="center" alignItems="center">
+                <Spinner size="large" color={colors.primary} />
+             </Box>
           ) : (
             <FlatList
               data={pois}
               keyExtractor={(item) => item.id}
-              contentContainerStyle={styles.listContent}
+              contentContainerStyle={{ padding: 20, gap: 12 }}
               renderItem={({ item }) => (
-                <View style={styles.card}>
-                  <View style={styles.cardInfo}>
-                    <Text style={styles.cardTitle}>{item.title}</Text>
-                    <Text style={styles.cardDesc} numberOfLines={2}>{item.description}</Text>
-                    <View style={styles.coordsBadge}>
-                      <Feather name="map-pin" size={10} color="#666" />
-                      <Text style={styles.coordsText}>
-                        {item.latitude.toFixed(4)}, {item.longitude.toFixed(4)}
-                      </Text>
-                    </View>
-                  </View>
-                  <View style={{flexDirection: 'row', alignItems: 'center'}}>
-                    <TouchableOpacity 
-                      style={styles.actionButton}
-                      onPress={() => openEditModal(item)}
-                    >
-                      <Feather name="edit-2" size={20} color={colors.primary} />
-                    </TouchableOpacity>
-                    <TouchableOpacity 
-                      style={styles.actionButton}
-                      onPress={() => handleDeletePoi(item.id)}
-                    >
-                      <Feather name="trash-2" size={20} color="#ff4444" />
-                    </TouchableOpacity>
-                  </View>
-                </View>
+                <Box
+                  bg={colors.surface}
+                  p="$4"
+                  rounded="$xl"
+                  borderWidth={1}
+                  borderColor={colors.border}
+                >
+                  <HStack justifyContent="space-between" alignItems="flex-start">
+                    <VStack flex={1} mr="$3">
+                      <Heading size="sm" color={colors.textPrimary} mb="$1">{item.title}</Heading>
+                      <Text color={colors.textSecondary} size="sm" numberOfLines={2} mb="$2">{item.description}</Text>
+                      <HStack bg={colors.background} px="$2" py="$1" rounded="$md" alignSelf="flex-start" alignItems="center" space="xs" borderWidth={1} borderColor={colors.border}>
+                        <Icon as={MapPinIcon} size="xs" color={colors.textMuted} />
+                        <Text size="xs" color={colors.textMuted}>
+                          {item.latitude.toFixed(4)}, {item.longitude.toFixed(4)}
+                        </Text>
+                      </HStack>
+                    </VStack>
+
+                    <HStack alignItems="center">
+                      <Button variant="link" size="sm" onPress={() => openEditModal(item)} p="$2">
+                        <Icon as={Edit2Icon} color={colors.primary} size="sm" />
+                      </Button>
+                      <Button variant="link" size="sm" onPress={() => handleDeletePoi(item.id)} p="$2">
+                        <Icon as={TrashIcon} color="$red500" size="sm" />
+                      </Button>
+                    </HStack>
+                  </HStack>
+                </Box>
               )}
               ListEmptyComponent={
-                <View style={styles.emptyState}>
-                  <Text style={styles.emptyText}>No hay puntos de interés creados todavía.</Text>
-                </View>
+                <Box py="$10" alignItems="center">
+                  <Text color={colors.textMuted}>No hay puntos de interés creados todavía.</Text>
+                </Box>
               }
             />
           )}
 
           {/* Edit Modal */}
-          {showEditModal && (
-            <View style={styles.modalOverlay}>
-              <View style={styles.modalContent}>
-                <Text style={styles.modalTitle}>Editar Punto de Interés</Text>
-                
-                <Text style={styles.label}>Título</Text>
-                <TextInput 
-                  value={editTitle}
-                  onChangeText={setEditTitle}
-                  style={styles.input}
-                />
+          <Modal
+            isOpen={showEditModal}
+            onClose={() => setShowEditModal(false)}
+            finalFocusRef={null}
+          >
+            <ModalBackdrop bg="$backgroundDark900" opacity={0.8} />
+            <ModalContent 
+              width="90%" 
+              maxWidth={500}
+              bg={colors.surface}
+              borderWidth={1}
+              borderColor={colors.border}
+            >
+               <ModalHeader>
+                 <Heading size="lg" color={colors.textPrimary}>Editar Punto de Interés</Heading>
+                 <ModalCloseButton>
+                   <Icon as={XIcon} color={colors.textSecondary} />
+                 </ModalCloseButton>
+               </ModalHeader>
+               <ModalBody>
+                 <VStack space="md">
+                    <FormControl>
+                      <FormControlLabel mb="$1"><FormControlLabelText color={colors.textSecondary}>Título</FormControlLabelText></FormControlLabel>
+                      <Input variant="outline" borderWidth={1} borderColor={colors.border} bg={colors.inputBackground}>
+                        <InputField value={editTitle} onChangeText={setEditTitle} color={colors.textPrimary}/>
+                      </Input>
+                    </FormControl>
 
-                <Text style={styles.label}>Descripción</Text>
-                <TextInput 
-                  value={editDesc}
-                  onChangeText={setEditDesc}
-                  multiline
-                  style={[styles.input, styles.textArea]}
-                />
+                    <FormControl>
+                      <FormControlLabel mb="$1"><FormControlLabelText color={colors.textSecondary}>Descripción</FormControlLabelText></FormControlLabel>
+                      <Textarea variant="default" borderWidth={1} borderColor={colors.border} bg={colors.inputBackground}>
+                         <TextareaInput value={editDesc} onChangeText={setEditDesc} color={colors.textPrimary} />
+                      </Textarea>
+                    </FormControl>
 
-                 <Text style={styles.label}>Añadir Imagen (URL)</Text>
-                 <View style={{flexDirection: 'row', gap: 8, marginBottom: 16}}>
-                    <TextInput 
-                        placeholder="https://..."
-                        onSubmitEditing={(e) => {
-                          if(e.nativeEvent.text) setEditImages([...editImages, e.nativeEvent.text]);
-                          e.currentTarget.clear();
-                        }}
-                        style={[styles.input, {flex: 1, marginBottom: 0}]}
-                     />
-                     <TouchableOpacity 
-                       style={styles.uploadButton}
-                       onPress={async () => {
-                         try {
-                           const result = await DocumentPicker.getDocumentAsync({
-                             type: 'image/*',
-                             copyToCacheDirectory: true,
-                           });
-                           
-                           if (result.canceled) return;
-                           
-                           setLoading(true);
-                           const asset = result.assets[0];
-                           const uploadedUrl = await uploadImageToSupabase(asset.uri);
-                           
-                           if (uploadedUrl) {
-                             setEditImages([...editImages, uploadedUrl]);
-                           } else {
-                             Alert.alert('Error', 'Error subiendo la imagen');
-                           }
-                         } catch (err) {
-                           Alert.alert('Error', 'Error seleccionando imagen');
-                         } finally {
-                           setLoading(false);
-                         }
-                       }}
-                     >
-                        <Feather name="upload" size={20} color="#fff" />
-                     </TouchableOpacity>
-                 </View>
+                    <FormControl>
+                      <FormControlLabel mb="$1"><FormControlLabelText color={colors.textSecondary}>Imágenes</FormControlLabelText></FormControlLabel>
+                      <HStack space="sm" mb="$2">
+                         <Input flex={1} variant="outline" borderWidth={1} borderColor={colors.border} bg={colors.inputBackground}>
+                            <InputField 
+                              placeholder="https://..." 
+                              placeholderTextColor={colors.textMuted}
+                              color={colors.textPrimary}
+                              onSubmitEditing={(e) => {
+                                if(e.nativeEvent.text) setEditImages([...editImages, e.nativeEvent.text]);
+                                e.currentTarget.clear();
+                              }}
+                            />
+                         </Input>
+                         <Button 
+                            onPress={async () => {
+                              try {
+                                const result = await DocumentPicker.getDocumentAsync({
+                                  type: 'image/*',
+                                  copyToCacheDirectory: true,
+                                });
+                                if (result.canceled) return;
+                                setUploading(true);
+                                const asset = result.assets[0];
+                                const uploadedUrl = await uploadImageToSupabase(asset.uri);
+                                if (uploadedUrl) {
+                                  setEditImages([...editImages, uploadedUrl]);
+                                } else {
+                                  Alert.alert('Error', 'Error subiendo la imagen');
+                                }
+                              } catch (err) {
+                                Alert.alert('Error', 'Error seleccionando imagen');
+                              } finally {
+                                setUploading(false);
+                              }
+                            }}
+                            bg={colors.brand.orange}
+                         >
+                            {uploading ? <Spinner color={colors.textOnPrimary} /> : <ButtonIcon as={UploadIcon} color={colors.textOnPrimary} />}
+                         </Button>
+                      </HStack>
 
-                 <View style={{flexDirection: 'row', gap: 8, flexWrap: 'wrap', marginBottom: 16}}>
-                    {editImages.map((img, idx) => (
-                      <View key={idx} style={{position: 'relative'}}>
-                        <Image source={{uri: img}} style={{width: 50, height: 50, borderRadius: 4}} />
-                        <TouchableOpacity 
-                          style={styles.removeImage}
-                          onPress={() => setEditImages(editImages.filter((_, i) => i !== idx))}
-                        >
-                          <Feather name="x" size={12} color="#fff" />
-                        </TouchableOpacity>
-                      </View>
-                    ))}
-                 </View>
+                      <HStack space="md" flexWrap="wrap">
+                        {editImages.map((img, idx) => (
+                           <Box key={idx} position="relative">
+                             <Image source={{uri: img}} style={{width: 60, height: 60, borderRadius: 4}} />
+                             <Pressable 
+                               position="absolute" top={-5} right={-5} bg="$red500" rounded="$full" p="$1"
+                               onPress={() => setEditImages(editImages.filter((_, i) => i !== idx))}
+                             >
+                                <Icon as={XIcon} size="xs" color="$white" />
+                             </Pressable>
+                           </Box>
+                        ))}
+                      </HStack>
+                    </FormControl>
+                 </VStack>
+               </ModalBody>
+               <ModalFooter>
+                 <Button variant="outline" action="secondary" onPress={() => setShowEditModal(false)} mr="$3" borderColor={colors.border}>
+                   <ButtonText color={colors.textSecondary}>Cancelar</ButtonText>
+                 </Button>
+                 <Button action="primary" onPress={handleUpdatePoi} bg={colors.brand.orange}>
+                   <ButtonText color={colors.textOnPrimary}>Guardar</ButtonText>
+                 </Button>
+               </ModalFooter>
+            </ModalContent>
+          </Modal>
 
-                <View style={styles.modalActions}>
-                  <TouchableOpacity 
-                    style={[styles.button, styles.cancelButton]}
-                    onPress={() => setShowEditModal(false)}
-                  >
-                    <Text style={styles.buttonTextCancel}>Cancelar</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity 
-                    style={[styles.button, styles.saveButton]}
-                    onPress={handleUpdatePoi}
-                  >
-                    <Text style={styles.buttonTextSave}>Guardar Cambios</Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
-            </View>
-          )}
-
-        </View>
+        </Box>
       )}
-    </View>
+    </Box>
   );
 }
-
-const styles = StyleSheet.create({
-  // ... existing styles ...
-  container: {
-    flex: 1,
-    backgroundColor: '#f8f9fa',
-  },
-  header: {
-    paddingTop: 60,
-    paddingHorizontal: 20,
-    backgroundColor: '#fff',
-    paddingBottom: 20,
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#333',
-  },
-  tabsContainer: {
-    flexDirection: 'row',
-    backgroundColor: '#fff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#eee',
-  },
-  tab: {
-    flex: 1,
-    paddingVertical: 16,
-    alignItems: 'center',
-    flexDirection: 'row',
-    justifyContent: 'center',
-    gap: 8,
-    borderBottomWidth: 2,
-    borderBottomColor: 'transparent',
-  },
-  activeTab: {
-    borderBottomColor: colors.primary,
-  },
-  tabText: {
-    fontSize: 16,
-    color: '#666',
-    fontWeight: '500',
-  },
-  activeTabText: {
-    color: colors.primary,
-    fontWeight: 'bold',
-  },
-  mapContainer: {
-    flex: 1,
-  },
-  hint: {
-    padding: 10,
-    backgroundColor: '#e3f2fd',
-    color: '#1565c0',
-    textAlign: 'center',
-    fontSize: 14,
-  },
-  listContainer: {
-    flex: 1,
-  },
-  listContent: {
-    padding: 20,
-  },
-  card: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
-    flexDirection: 'row',
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOpacity: 0.05,
-    shadowRadius: 5,
-    elevation: 2,
-  },
-  cardInfo: {
-    flex: 1,
-  },
-  cardTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 4,
-  },
-  cardDesc: {
-    fontSize: 14,
-    color: '#666',
-    marginBottom: 6,
-  },
-  coordsBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    backgroundColor: '#f0f0f0',
-    alignSelf: 'flex-start',
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 4,
-  },
-  coordsText: {
-    fontSize: 10,
-    color: '#666',
-  },
-  deleteButton: {
-    padding: 10,
-  },
-  actionButton: {
-    padding: 8,
-    marginLeft: 4,
-  },
-  emptyState: {
-    padding: 40,
-    alignItems: 'center',
-  },
-  emptyText: {
-    color: '#999',
-    fontSize: 16,
-  },
-  // Modal Styles
-  modalOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
-  },
-  modalContent: {
-    backgroundColor: '#fff',
-    borderRadius: 16,
-    padding: 24,
-    width: '100%',
-    maxWidth: 500,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 12,
-    elevation: 8,
-  },
-  modalTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    marginBottom: 20,
-    color: '#333',
-  },
-  label: {
-    fontSize: 14,
-    fontWeight: '600',
-    marginBottom: 8,
-    color: '#444',
-  },
-  input: {
-    backgroundColor: '#f8f9fa',
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 16, // Default marginBottom
-    fontSize: 16,
-  },
-  textArea: {
-    height: 100,
-    textAlignVertical: 'top',
-  },
-  modalActions: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    gap: 12,
-    marginTop: 8,
-  },
-  button: {
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    borderRadius: 8,
-  },
-  cancelButton: {
-    backgroundColor: '#f1f3f5',
-  },
-  saveButton: {
-    backgroundColor: colors.primary,
-  },
-  buttonTextCancel: {
-    color: '#666',
-    fontWeight: '600',
-  },
-  buttonTextSave: {
-    color: '#fff',
-    fontWeight: '600',
-  },
-  removeImage: {
-    position: 'absolute',
-    top: -4,
-    right: -4,
-    backgroundColor: '#ff4444',
-    borderRadius: 10,
-    width: 20,
-    height: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  uploadButton: {
-    backgroundColor: colors.primary,
-    borderRadius: 8,
-    padding: 12,
-    justifyContent: 'center',
-    alignItems: 'center',
-    aspectRatio: 1,
-  },
-});

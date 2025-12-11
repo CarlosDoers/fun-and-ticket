@@ -1,9 +1,27 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, StyleSheet, Alert, TouchableOpacity, KeyboardAvoidingView, Platform } from 'react-native';
+import { KeyboardAvoidingView, Platform, Alert } from 'react-native';
 import { supabase } from '../../src/lib/supabase';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { colors } from '../../src/lib/theme';
+import { ArrowLeftIcon } from 'lucide-react-native';
+
+import { 
+  Box, 
+  Text, 
+  Heading, 
+  Button, 
+  ButtonText, 
+  ButtonSpinner,
+  VStack,
+  HStack,
+  Input, 
+  InputField,
+  FormControl,
+  FormControlLabel,
+  FormControlLabelText,
+  Pressable,
+  Icon
+} from '@gluestack-ui/themed';
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -30,7 +48,6 @@ export default function LoginScreen() {
         Alert.alert('Error', error.message);
       }
     } else {
-      // Check role and redirect explicitly
       const { data: profile } = await supabase
         .from('profiles')
         .select('role')
@@ -49,155 +66,111 @@ export default function LoginScreen() {
   return (
     <KeyboardAvoidingView 
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      style={styles.container}
+      style={{ flex: 1, backgroundColor: colors.background }}
     >
-      <LinearGradient
-        colors={[colors.gradientStart, colors.gradientMiddle, colors.gradientEnd]}
-        style={styles.gradient}
-      >
-        <View style={styles.content}>
-          <View style={styles.header}>
-            <Text style={styles.title}>Fun & Tickets</Text>
-            <Text style={styles.subtitle}>Guided Tours & Adventures</Text>
-          </View>
-
-          <View style={styles.formContainer}>
-            <View style={styles.inputContainer}>
-              <Text style={styles.label}>Email</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="Enter your email"
-                placeholderTextColor="#999"
-                onChangeText={setEmail}
-                value={email}
-                autoCapitalize="none"
-                keyboardType="email-address"
-              />
-            </View>
-
-            <View style={styles.inputContainer}>
-              <Text style={styles.label}>Password</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="Enter your password"
-                placeholderTextColor="#999"
-                onChangeText={setPassword}
-                value={password}
-                secureTextEntry={true}
-                autoCapitalize="none"
-              />
-            </View>
-
-            <TouchableOpacity
-              style={[styles.button, styles.primaryButton, loading && styles.buttonDisabled]}
-              onPress={signInWithEmail}
-              disabled={loading}
+      <Box flex={1} justifyContent="center" p="$6" bg={colors.background}>
+        <VStack space="4xl" alignItems="center">
+          
+          {/* Header */}
+          <VStack alignItems="center" space="md" w="$full" maxWidth={500}>
+            <Pressable 
+              onPress={() => router.replace('/')} 
+              alignSelf="flex-start" 
+              mb="$4"
             >
-              <Text style={styles.buttonText}>
-                {loading ? 'Loading...' : 'Sign In'}
-              </Text>
-            </TouchableOpacity>
+               <HStack space="xs" alignItems="center">
+                 <Icon as={ArrowLeftIcon} color={colors.primary} size="sm" />
+                 <Text color={colors.primary} size="md" fontWeight="$bold">Volver a la App</Text>
+               </HStack>
+            </Pressable>
+            
+            <Heading size="3xl" color={colors.textPrimary} fontWeight="$bold" textAlign="center" width="$full">
+              Bienvenido de nuevo
+            </Heading>
+            <Text color={colors.textSecondary} size="lg" textAlign="center">
+              Accede al panel de administración para gestionar tours y contenidos.
+            </Text>
+          </VStack>
 
-            <TouchableOpacity
-              style={styles.homeLink}
-              onPress={() => router.replace('/')}
-            >
-              <Text style={styles.homeLinkText}>← Volver al Inicio</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </LinearGradient>
+          {/* Form Container */}
+          <Box 
+            bg={colors.surface}
+            p="$6" 
+            rounded="$xl" 
+            w="$full" 
+            maxWidth={500}
+            borderWidth={1}
+            borderColor={colors.border}
+          >
+            <VStack space="xl">
+              
+              <FormControl>
+                <FormControlLabel mb="$2">
+                  <FormControlLabelText color={colors.textPrimary}>Email</FormControlLabelText>
+                </FormControlLabel>
+                <Input 
+                  variant="outline" 
+                  size="md" 
+                  borderWidth={1}
+                  borderColor={colors.border}
+                  bg={colors.inputBackground}
+                >
+                  <InputField 
+                     placeholder="ejemplo@correo.com" 
+                     placeholderTextColor={colors.textMuted}
+                     value={email}
+                     onChangeText={setEmail}
+                     autoCapitalize="none"
+                     keyboardType="email-address"
+                     color={colors.textPrimary}
+                  />
+                </Input>
+              </FormControl>
+
+              <FormControl>
+                <FormControlLabel mb="$2">
+                  <FormControlLabelText color={colors.textPrimary}>Contraseña</FormControlLabelText>
+                </FormControlLabel>
+                <Input 
+                  variant="outline" 
+                  size="md"
+                  borderWidth={1}
+                  borderColor={colors.border}
+                  bg={colors.inputBackground}
+                >
+                  <InputField 
+                     placeholder="Ingresa tu contraseña" 
+                     placeholderTextColor={colors.textMuted}
+                     value={password}
+                     onChangeText={setPassword}
+                     secureTextEntry={true}
+                     autoCapitalize="none"
+                     color={colors.textPrimary}
+                  />
+                </Input>
+              </FormControl>
+
+              <Button 
+                size="xl" 
+                variant="solid" 
+                action="primary" 
+                bg={colors.brand.orange}
+                isDisabled={loading}
+                onPress={signInWithEmail}
+                mt="$4"
+                sx={{
+                  ':hover': { bg: colors.brand.orangeDark },
+                  ':active': { bg: colors.brand.orangeDark }
+                }}
+              >
+                {loading && <ButtonSpinner color={colors.textOnPrimary} mr="$2"/>}
+                <ButtonText fontWeight="$bold" color={colors.textOnPrimary}>{loading ? 'Iniciando...' : 'Iniciar Sesión'}</ButtonText>
+              </Button>
+
+            </VStack>
+          </Box>
+        </VStack>
+      </Box>
     </KeyboardAvoidingView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  gradient: {
-    flex: 1,
-  },
-  content: {
-    flex: 1,
-    justifyContent: 'center',
-    padding: 24,
-  },
-  header: {
-    alignItems: 'center',
-    marginBottom: 48,
-  },
-  title: {
-    fontSize: 36,
-    fontWeight: 'bold',
-    color: '#fff',
-    marginBottom: 8,
-    textShadowColor: 'rgba(0, 0, 0, 0.3)',
-    textShadowOffset: { width: 0, height: 2 },
-    textShadowRadius: 4,
-  },
-  subtitle: {
-    fontSize: 16,
-    color: '#fff',
-    opacity: 0.9,
-  },
-  formContainer: {
-    backgroundColor: 'rgba(255, 255, 255, 0.95)',
-    borderRadius: 20,
-    padding: 24,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 8,
-  },
-  inputContainer: {
-    marginBottom: 20,
-  },
-  label: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#333',
-    marginBottom: 8,
-  },
-  input: {
-    backgroundColor: '#f5f5f5',
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
-    padding: 14,
-    borderRadius: 12,
-    fontSize: 16,
-    color: '#333',
-  },
-  button: {
-    padding: 16,
-    borderRadius: 12,
-    alignItems: 'center',
-    marginTop: 8,
-  },
-  primaryButton: {
-    backgroundColor: colors.primary,
-    shadowColor: colors.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  buttonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  buttonDisabled: {
-    opacity: 0.5,
-  },
-  homeLink: {
-    marginTop: 20,
-    alignItems: 'center',
-  },
-  homeLinkText: {
-    color: colors.primary,
-    fontSize: 16,
-    fontWeight: '600',
-  },
-});

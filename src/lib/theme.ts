@@ -1,86 +1,79 @@
 // Theme colors and styles for the app
-// Neutral tones with glassmorphism effects
+// Dark Mode with Orange Accents - Inspired by user reference
 
 export const colors = {
-  // Primary colors - Neutral/Slate theme
-  primary: '#1e293b', // slate-800
-  primaryLight: '#334155', // slate-700
-  primaryDark: '#0f172a', // slate-900
+  // Brand Identity
+  brand: {
+    orange: '#FF5E00', // Vibrant Orange (Primary Action)
+    orangeDark: '#D14D00', // Hover/Active states
+    orangeLight: '#FF8533', // Highlights
+  },
+
+  // Semantic Aliases (Use these in components)
+  primary: '#FF5E00', 
+  primaryHover: '#D14D00',
   
-  // Accent colors
-  accent: '#3b82f6', // blue-500
-  accentLight: '#60a5fa', // blue-400
+  // Backgrounds
+  background: '#0F0F0F', // Main app background (Deep dark)
+  surface: '#18181b', // Cards, Sidebars, Modals (Slightly lighter)
+  surfaceHighlight: '#27272a', // Hover states on lists
+  inputBackground: '#121212', // Input fields
   
-  // Neutral backgrounds
-  background: '#f1f5f9', // slate-100
-  surface: '#ffffff',
-  surfaceHover: '#f8fafc', // slate-50
+  // Text
+  textPrimary: '#FFFFFF', // Headings, main text
+  textSecondary: '#A1A1AA', // Subtitles, descriptions (Zinc-400)
+  textMuted: '#71717a', // Placeholders, disabled text (Zinc-500)
+  textOnPrimary: '#FFFFFF', // Text on orange buttons
   
-  // Text colors
-  textPrimary: '#1e293b', // slate-800
-  textSecondary: '#64748b', // slate-500
-  textMuted: '#94a3b8', // slate-400
-  textOnDark: '#ffffff',
+  // Borders & Dividers
+  border: '#27272a', // Subtle borders (Zinc-800)
+  borderFocus: '#FF5E00', // Focus state for inputs
   
-  // Status colors
+  // Status
   success: '#10b981', // emerald-500
   warning: '#f59e0b', // amber-500
   error: '#ef4444', // red-500
   info: '#3b82f6', // blue-500
   
-  // Gradient colors for background
-  gradientStart: '#1e293b', // slate-800
-  gradientMiddle: '#334155', // slate-700
-  gradientEnd: '#475569', // slate-600
-  
-  // POI/Map specific
-  routeColor: '#3b82f6', // blue-500
-  poiColor: '#f59e0b', // amber-500
+  // Maps/Vis
+  routeColor: '#FF5E00',
+  poiColor: '#FFFFFF',
 };
 
-// Glassmorphism styles
-export const glassmorphism = {
-  light: {
-    backgroundColor: 'rgba(255, 255, 255, 0.85)',
-    backdropFilter: 'blur(10px)',
-    borderColor: 'rgba(255, 255, 255, 0.3)',
-    borderWidth: 1,
+// Common styles to reuse
+export const layout = {
+  borderRadius: {
+    sm: 8,
+    md: 12,
+    lg: 16,
+    xl: 24,
+    full: 9999,
   },
-  dark: {
-    backgroundColor: 'rgba(30, 41, 59, 0.85)',
-    backdropFilter: 'blur(10px)',
-    borderColor: 'rgba(255, 255, 255, 0.1)',
-    borderWidth: 1,
+  spacing: {
+    xs: 4,
+    sm: 8,
+    md: 16,
+    lg: 24,
+    xl: 32,
   },
 };
 
-// Common shadow styles
 export const shadows = {
-  small: {
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
-  },
-  medium: {
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.15,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  large: {
+  default: {
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 16,
-    elevation: 8,
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 5,
   },
+  none: {
+    shadowOpacity: 0,
+    elevation: 0,
+  }
 };
 
 export default {
   colors,
-  glassmorphism,
+  layout,
   shadows,
 };

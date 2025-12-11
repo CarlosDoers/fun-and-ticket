@@ -61,10 +61,15 @@ function InitialLayout() {
   return <Slot />;
 }
 
+import { GluestackUIProvider } from "@gluestack-ui/themed";
+import { config } from "@gluestack-ui/config";
+
 export default function RootLayout() {
   return (
     <AuthProvider>
-      <InitialLayout />
+      <GluestackUIProvider config={config}>
+        <InitialLayout />
+      </GluestackUIProvider>
     </AuthProvider>
   );
 }

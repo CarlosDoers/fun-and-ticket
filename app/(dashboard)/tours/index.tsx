@@ -1,10 +1,36 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, FlatList, StyleSheet, Alert, TouchableOpacity, ActivityIndicator, Platform } from 'react-native';
+import { FlatList, Alert, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import { supabase } from '../../../src/lib/supabase';
 import { Tour } from '../../../src/types';
-import { colors } from '../../../src/lib/theme';
+import { colors } from '../../../src/lib/theme'; 
 import { Feather } from '@expo/vector-icons';
+
+import { 
+  Box, 
+  Text, 
+  Heading, 
+  Button, 
+  ButtonText, 
+  ButtonIcon,
+  HStack, 
+  VStack, 
+  Spinner,
+  Pressable,
+  Icon,
+  Badge,
+  BadgeText,
+  BadgeIcon
+} from '@gluestack-ui/themed';
+import { 
+  ArrowLeftIcon, 
+  PlusIcon, 
+  MapPinIcon, 
+  NavigationIcon, 
+  Edit2Icon, 
+  TrashIcon, 
+  MapIcon 
+} from 'lucide-react-native';
 
 export default function ToursList() {
   const [tours, setTours] = useState<Tour[]>([]);
@@ -77,275 +103,143 @@ export default function ToursList() {
 
   if (loading) {
     return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={colors.primary} />
-      </View>
+      <Box flex={1} justifyContent="center" alignItems="center" bg={colors.background}>
+        <Spinner size="large" color={colors.primary} />
+      </Box>
     );
   }
 
   return (
-    <View style={styles.container}>
+    <Box flex={1} bg={colors.background}>
       {/* Header */}
-      <View style={styles.header}>
-        <View>
-          <TouchableOpacity 
-            onPress={() => router.push('/(dashboard)')}
-            style={{ marginBottom: 8 }}
+      <Box 
+        pt="$16" 
+        pb="$5" 
+        px="$5" 
+        bg={colors.surface} 
+        borderBottomWidth={1} 
+        borderBottomColor={colors.border}
+      >
+        <HStack justifyContent="space-between" alignItems="center">
+          <VStack>
+            <Pressable onPress={() => router.push('/(dashboard)')} mb="$2">
+              <HStack alignItems="center" space="xs">
+                <Icon as={ArrowLeftIcon} size="sm" color={colors.primary} />
+                <Text color={colors.primary} fontWeight="$semibold" size="sm">Volver al Dashboard</Text>
+              </HStack>
+            </Pressable>
+            <Heading size="2xl" color={colors.textPrimary}>Tours</Heading>
+            <Text color={colors.textSecondary} size="sm" mt="$1">{tours.length} tours creados</Text>
+          </VStack>
+
+          <Button 
+            size="md" 
+            variant="solid" 
+            action="primary" 
+            bg={colors.brand.orange} 
+            rounded="$xl"
+            onPress={() => router.push('/(dashboard)/tours/create')}
           >
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-              <Feather name="arrow-left" size={16} color={colors.primary} />
-              <Text style={{ color: colors.primary, fontSize: 14, fontWeight: '600' }}>Volver al Dashboard</Text>
-            </View>
-          </TouchableOpacity>
-          <Text style={styles.title}>Tours</Text>
-          <Text style={styles.subtitle}>{tours.length} tours creados</Text>
-        </View>
-        <TouchableOpacity
-          style={styles.addButton}
-          onPress={() => router.push('/(dashboard)/tours/create')}
-        >
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-            <Feather name="plus" size={16} color="#fff" />
-            <Text style={styles.addButtonText}>Nuevo</Text>
-          </View>
-        </TouchableOpacity>
-      </View>
+            <ButtonIcon as={PlusIcon} color={colors.textOnPrimary} mr="$2" />
+            <ButtonText fontWeight="$bold" color={colors.textOnPrimary}>Nuevo</ButtonText>
+          </Button>
+        </HStack>
+      </Box>
 
       {/* Tours List */}
       <FlatList
         data={tours}
         keyExtractor={(item) => item.id}
-        contentContainerStyle={styles.listContent}
+        contentContainerStyle={{ padding: 20, gap: 16 }}
         renderItem={({ item }) => (
-          <TouchableOpacity
-            style={styles.card}
+          <Pressable
             onPress={() => router.push(`/(dashboard)/tours/${item.id}`)}
-            activeOpacity={0.7}
           >
-            <View style={styles.cardHeader}>
-              <Text style={styles.cardTitle} numberOfLines={1}>{item.name}</Text>
-              <View style={styles.badges}>
-                {getPoiCount(item) > 0 && (
-                  <View style={styles.badge}>
-                    <Feather name="map-pin" size={10} color={colors.primary} style={{ marginRight: 4 }} />
-                    <Text style={styles.badgeText}>{getPoiCount(item)} POIs</Text>
-                  </View>
-                )}
-                {getWaypointCount(item) > 0 && (
-                  <View style={[styles.badge, styles.badgeSecondary]}>
-                    <Feather name="navigation" size={10} color={colors.accent} style={{ marginRight: 4 }} />
-                    <Text style={styles.badgeTextSecondary}>{getWaypointCount(item)} puntos</Text>
-                  </View>
-                )}
-              </View>
-            </View>
-            
-            <Text style={styles.cardDescription} numberOfLines={2}>
-              {item.description || 'Sin descripción'}
-            </Text>
-            
-            <View style={styles.cardActions}>
-              <TouchableOpacity
-                style={styles.editButton}
-                onPress={() => router.push(`/(dashboard)/tours/${item.id}`)}
+            {({ pressed }) => (
+              <Box
+                bg={colors.surface}
+                p="$5"
+                rounded="$2xl"
+                borderWidth={1}
+                borderColor={pressed ? colors.primary : colors.border}
+                style={{ opacity: pressed ? 0.9 : 1 }}
               >
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                  <Feather name="edit-2" size={14} color={colors.primary} />
-                  <Text style={styles.editButtonText}>Editar</Text>
-                </View>
-              </TouchableOpacity>
-              
-              <TouchableOpacity
-                style={styles.deleteButton}
-                onPress={() => deleteTour(item.id, item.name)}
-              >
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                  <Feather name="trash-2" size={14} color="#f44336" />
-                  <Text style={styles.deleteButtonText}>Eliminar</Text>
-                </View>
-              </TouchableOpacity>
-            </View>
-          </TouchableOpacity>
+                <HStack justifyContent="space-between" alignItems="flex-start" mb="$2">
+                  <Heading size="md" color={colors.textPrimary} numberOfLines={1} flex={1} mr="$3">
+                    {item.name}
+                  </Heading>
+                  
+                  <HStack space="sm">
+                    {getPoiCount(item) > 0 && (
+                      <Badge size="md" variant="solid" bg="$blue900" borderRadius="$lg" borderColor="$blue700" borderWidth={1}>
+                        <BadgeIcon as={MapPinIcon} color="$blue400" mr="$1" />
+                        <BadgeText color="$blue100">{getPoiCount(item)} POIs</BadgeText>
+                      </Badge>
+                    )}
+                    {getWaypointCount(item) > 0 && (
+                      <Badge size="md" variant="solid" bg="$purple900" borderRadius="$lg" borderColor="$purple700" borderWidth={1}>
+                        <BadgeIcon as={NavigationIcon} color="$purple400" mr="$1" />
+                        <BadgeText color="$purple100">{getWaypointCount(item)} pts</BadgeText>
+                      </Badge>
+                    )}
+                  </HStack>
+                </HStack>
+
+                <Text color={colors.textSecondary} numberOfLines={2} mb="$4" lineHeight="$sm">
+                  {item.description || 'Sin descripción'}
+                </Text>
+
+                <HStack 
+                  borderTopWidth={1} 
+                  borderTopColor={colors.border} 
+                  pt="$4" 
+                  gap="$3"
+                >
+                  <Button 
+                    variant="outline" 
+                    action="primary" 
+                    size="sm" 
+                    flex={1} 
+                    borderColor={colors.border}
+                    onPress={() => router.push(`/(dashboard)/tours/${item.id}`)}
+                  >
+                    <ButtonIcon as={Edit2Icon} color={colors.primary} mr="$2" />
+                    <ButtonText color={colors.primary}>Editar</ButtonText>
+                  </Button>
+
+                  <Button 
+                    variant="outline" 
+                    action="negative" 
+                    size="sm" 
+                    flex={1} 
+                    borderColor={colors.border}
+                    onPress={() => deleteTour(item.id, item.name)}
+                  >
+                    <ButtonIcon as={TrashIcon} color="$red500" mr="$2" />
+                    <ButtonText color="$red500">Eliminar</ButtonText>
+                  </Button>
+                </HStack>
+              </Box>
+            )}
+          </Pressable>
         )}
         ListEmptyComponent={
-          <View style={styles.emptyContainer}>
-            <View style={{ marginBottom: 16 }}>
-              <Feather name="map" size={64} color="#ccc" />
-            </View>
-            <Text style={styles.emptyTitle}>No hay tours</Text>
-            <Text style={styles.emptyDescription}>
-              Crea tu primer tour para empezar
-            </Text>
-            <TouchableOpacity
-              style={styles.emptyButton}
+          <Box alignItems="center" py="$16">
+            <Icon as={MapIcon} size="4xl" color={colors.textMuted} mb="$4" />
+            <Heading size="lg" color={colors.textPrimary} mb="$2">No hay tours</Heading>
+            <Text color={colors.textSecondary} mb="$6">Crea tu primer tour para empezar</Text>
+            <Button 
+              size="lg" 
+              variant="solid" 
+              action="primary" 
+              bg={colors.brand.orange}
               onPress={() => router.push('/(dashboard)/tours/create')}
             >
-              <Text style={styles.emptyButtonText}>Crear Tour</Text>
-            </TouchableOpacity>
-          </View>
+              <ButtonText fontWeight="$bold" color={colors.textOnPrimary}>Crear Tour</ButtonText>
+            </Button>
+          </Box>
         }
       />
-    </View>
+    </Box>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#f8f9fa',
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#f8f9fa',
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 20,
-    paddingTop: 60,
-    backgroundColor: '#fff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#eee',
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#333',
-  },
-  subtitle: {
-    fontSize: 14,
-    color: '#666',
-    marginTop: 2,
-  },
-  addButton: {
-    backgroundColor: colors.primary,
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    borderRadius: 12,
-  },
-  addButtonText: {
-    color: '#fff',
-    fontWeight: 'bold',
-    fontSize: 16,
-  },
-  listContent: {
-    padding: 20,
-    gap: 16,
-  },
-  card: {
-    backgroundColor: '#fff',
-    borderRadius: 16,
-    padding: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    elevation: 3,
-  },
-  cardHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: 8,
-  },
-  cardTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#333',
-    flex: 1,
-    marginRight: 12,
-  },
-  badges: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  badge: {
-    backgroundColor: '#f0f0ff',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 8,
-  },
-  badgeText: {
-    fontSize: 12,
-    color: colors.primary,
-    fontWeight: '600',
-  },
-  badgeSecondary: {
-    backgroundColor: '#fff0f5',
-  },
-  badgeTextSecondary: {
-    fontSize: 12,
-    color: colors.accent,
-    fontWeight: '600',
-  },
-  cardDescription: {
-    fontSize: 14,
-    color: '#666',
-    lineHeight: 20,
-    marginBottom: 16,
-  },
-  cardActions: {
-    flexDirection: 'row',
-    gap: 12,
-    borderTopWidth: 1,
-    borderTopColor: '#f0f0f0',
-    paddingTop: 16,
-  },
-  editButton: {
-    flex: 1,
-    backgroundColor: '#f0f0ff',
-    paddingVertical: 10,
-    borderRadius: 8,
-    alignItems: 'center',
-  },
-  editButtonText: {
-    color: colors.primary,
-    fontWeight: '600',
-    fontSize: 14,
-  },
-  deleteButton: {
-    flex: 1,
-    backgroundColor: '#fff0f0',
-    paddingVertical: 10,
-    borderRadius: 8,
-    alignItems: 'center',
-  },
-  deleteButtonText: {
-    color: '#f44336',
-    fontWeight: '600',
-    fontSize: 14,
-  },
-  emptyContainer: {
-    alignItems: 'center',
-    paddingVertical: 60,
-  },
-  emptyIcon: {
-    fontSize: 64,
-    marginBottom: 16,
-  },
-  emptyTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 8,
-  },
-  emptyDescription: {
-    fontSize: 14,
-    color: '#666',
-    marginBottom: 24,
-  },
-  emptyButton: {
-    backgroundColor: colors.primary,
-    paddingHorizontal: 32,
-    paddingVertical: 14,
-    borderRadius: 12,
-  },
-  emptyButtonText: {
-    color: '#fff',
-    fontWeight: 'bold',
-    fontSize: 16,
-  },
-});

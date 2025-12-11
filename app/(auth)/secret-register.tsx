@@ -5,43 +5,28 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { colors } from '../../src/lib/theme';
 
-export default function LoginScreen() {
+export default function RegisterScreen() {
   const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
 
-  async function signInWithEmail() {
-    if (!email.trim() || !password.trim()) {
-      Alert.alert('Campos Incompletos', 'Por favor, ingresa tu correo electrónico y contraseña.');
+  async function signUpWithEmail() {
+    if (!email || !password) {
+      Alert.alert('Error', 'Please enter both email and password');
       return;
     }
 
     setLoading(true);
-    const { data, error } = await supabase.auth.signInWithPassword({
+    const { error } = await supabase.auth.signUp({
       email,
       password,
     });
 
-    if (error) {
-      if (error.message.includes('Invalid login credentials')) {
-        Alert.alert('Error de Acceso', 'El correo o la contraseña son incorrectos.');
-      } else {
-        Alert.alert('Error', error.message);
-      }
-    } else {
-      // Check role and redirect explicitly
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('role')
-        .eq('id', data.user.id)
-        .single();
-      
-      if (profile?.role === 'admin' || profile?.role === 'guide') {
-        router.replace('/(dashboard)');
-      } else {
-        router.replace('/');
-      }
+    if (error) Alert.alert('Error', error.message);
+    else {
+      Alert.alert('Success', 'Registration successful! Check your inbox for verification.');
+      router.replace('/(auth)/login');
     }
     setLoading(false);
   }
@@ -57,8 +42,8 @@ export default function LoginScreen() {
       >
         <View style={styles.content}>
           <View style={styles.header}>
-            <Text style={styles.title}>Fun & Tickets</Text>
-            <Text style={styles.subtitle}>Guided Tours & Adventures</Text>
+            <Text style={styles.title}>Admin Registration</Text>
+            <Text style={styles.subtitle}>Create a new account</Text>
           </View>
 
           <View style={styles.formContainer}>
@@ -66,7 +51,7 @@ export default function LoginScreen() {
               <Text style={styles.label}>Email</Text>
               <TextInput
                 style={styles.input}
-                placeholder="Enter your email"
+                placeholder="Enter email"
                 placeholderTextColor="#999"
                 onChangeText={setEmail}
                 value={email}
@@ -79,7 +64,7 @@ export default function LoginScreen() {
               <Text style={styles.label}>Password</Text>
               <TextInput
                 style={styles.input}
-                placeholder="Enter your password"
+                placeholder="Enter password"
                 placeholderTextColor="#999"
                 onChangeText={setPassword}
                 value={password}
@@ -90,19 +75,19 @@ export default function LoginScreen() {
 
             <TouchableOpacity
               style={[styles.button, styles.primaryButton, loading && styles.buttonDisabled]}
-              onPress={signInWithEmail}
+              onPress={signUpWithEmail}
               disabled={loading}
             >
               <Text style={styles.buttonText}>
-                {loading ? 'Loading...' : 'Sign In'}
+                {loading ? 'Creating Account...' : 'Sign Up'}
               </Text>
             </TouchableOpacity>
 
             <TouchableOpacity
               style={styles.homeLink}
-              onPress={() => router.replace('/')}
+              onPress={() => router.replace('/(auth)/login')}
             >
-              <Text style={styles.homeLinkText}>← Volver al Inicio</Text>
+              <Text style={styles.homeLinkText}>← Back to Login</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -128,10 +113,11 @@ const styles = StyleSheet.create({
     marginBottom: 48,
   },
   title: {
-    fontSize: 36,
+    fontSize: 32,
     fontWeight: 'bold',
     color: '#fff',
     marginBottom: 8,
+    textAlign: 'center',
     textShadowColor: 'rgba(0, 0, 0, 0.3)',
     textShadowOffset: { width: 0, height: 2 },
     textShadowRadius: 4,

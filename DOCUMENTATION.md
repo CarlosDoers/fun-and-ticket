@@ -381,6 +381,29 @@ await supabase
 await supabase.from('tours').delete().eq('id', tourId);
 ```
 
+### 10.3 Gestión de Usuarios y Roles
+
+La aplicación utiliza un sistema de roles básicos (`admin`, `guide`, `user`) gestionados en la tabla `profiles`.
+
+**Crear un Administrador:**
+
+Por seguridad, el rol `admin` no se puede asignar desde la aplicación. Debe hacerse manualmente directamente en la base de datos de Supabase.
+
+1.  El usuario se registra normalmente en la aplicación (o en la pantalla de registro oculta).
+2.  Un administrador accede al **SQL Editor** de Supabase.
+3.  Ejecuta el siguiente comando (sustituyendo el email):
+
+```sql
+insert into public.profiles (id, email, role)
+select id, email, 'admin'
+from auth.users
+where email = 'correo@ejemplo.com'
+on conflict (id) do update
+set role = 'admin';
+```
+
+---
+
 ---
 
 ## 11. Comandos Útiles

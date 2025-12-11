@@ -20,16 +20,19 @@ function ImageGallery({ images, onRemove }: { images: string[], onRemove?: (inde
 
   if (!images || images.length === 0) return null;
 
-  const goToPrevious = () => {
+  const goToPrevious = (e) => {
+    e?.stopPropagation();
     setCurrentIndex((prev) => (prev === 0 ? images.length - 1 : prev - 1));
   };
 
-  const goToNext = () => {
+  const goToNext = (e) => {
+    e?.stopPropagation();
     setCurrentIndex((prev) => (prev === images.length - 1 ? 0 : prev + 1));
   };
 
   return (
-    <View style={{ position: 'relative' }}>
+    <div style={{ position: 'relative', marginBottom: 10 }}>
+      {/* Compatibility for React Native Web env which might need explicit img styles to work inside div */}
       <img 
         src={images[currentIndex]} 
         alt={`POI image ${currentIndex + 1}`}
@@ -38,6 +41,7 @@ function ImageGallery({ images, onRemove }: { images: string[], onRemove?: (inde
           height: 150, 
           objectFit: 'cover',
           borderRadius: 4,
+          display: 'block'
         }}
         onError={(e) => {
           (e.target as HTMLImageElement).src = 'https://via.placeholder.com/300x150?text=Error+loading+image';
@@ -46,56 +50,70 @@ function ImageGallery({ images, onRemove }: { images: string[], onRemove?: (inde
       
       {images.length > 1 && (
         <>
-          <TouchableOpacity
-            onPress={goToPrevious}
+          <div
+            onClick={goToPrevious}
             style={{
               position: 'absolute',
               left: 5,
               top: '50%',
-              transform: [{ translateY: -15 }],
+              transform: 'translateY(-50%)',
               backgroundColor: 'rgba(0,0,0,0.5)',
               width: 30,
               height: 30,
               borderRadius: 15,
+              display: 'flex',
               justifyContent: 'center',
               alignItems: 'center',
+              cursor: 'pointer',
+              color: 'white',
+              fontWeight: 'bold',
+              fontSize: 18,
+              zIndex: 10
             }}
           >
-            <Text style={{ color: 'white', fontSize: 18, fontWeight: 'bold' }}>‹</Text>
-          </TouchableOpacity>
+            ‹
+          </div>
           
-          <TouchableOpacity
-            onPress={goToNext}
+          <div
+            onClick={goToNext}
             style={{
               position: 'absolute',
               right: 5,
               top: '50%',
-              transform: [{ translateY: -15 }],
+              transform: 'translateY(-50%)',
               backgroundColor: 'rgba(0,0,0,0.5)',
               width: 30,
               height: 30,
               borderRadius: 15,
+              display: 'flex',
               justifyContent: 'center',
               alignItems: 'center',
+              cursor: 'pointer',
+              color: 'white',
+              fontWeight: 'bold',
+              fontSize: 18,
+              zIndex: 10
             }}
           >
-            <Text style={{ color: 'white', fontSize: 18, fontWeight: 'bold' }}>›</Text>
-          </TouchableOpacity>
+           ›
+          </div>
         </>
       )}
       
       {images.length > 1 && (
-        <View style={{ 
+        <div style={{ 
           position: 'absolute', 
           bottom: 5, 
           left: 0, 
           right: 0, 
+          display: 'flex',
           flexDirection: 'row', 
           justifyContent: 'center',
           gap: 4,
+          zIndex: 10
         }}>
           {images.map((_, idx) => (
-            <View
+            <div
               key={idx}
               style={{
                 width: 6,
@@ -105,12 +123,15 @@ function ImageGallery({ images, onRemove }: { images: string[], onRemove?: (inde
               }}
             />
           ))}
-        </View>
+        </div>
       )}
       
       {onRemove && (
-        <TouchableOpacity
-          onPress={() => onRemove(currentIndex)}
+        <div
+          onClick={(e) => {
+            e.stopPropagation();
+            onRemove(currentIndex);
+          }}
           style={{
             position: 'absolute',
             top: 5,
@@ -119,20 +140,31 @@ function ImageGallery({ images, onRemove }: { images: string[], onRemove?: (inde
             width: 24,
             height: 24,
             borderRadius: 12,
+            display: 'flex',
             justifyContent: 'center',
             alignItems: 'center',
+            cursor: 'pointer',
+            color: 'white',
+            fontWeight: 'bold',
+            fontSize: 14,
+            zIndex: 11
           }}
         >
-          <Text style={{ color: 'white', fontSize: 14, fontWeight: 'bold' }}>×</Text>
-        </TouchableOpacity>
+          ×
+        </div>
       )}
-    </View>
+    </div>
   );
 }
 
 interface WebMapEditorProps {
   initialRouteData?: RouteData;
   onRouteDataChange: (data: RouteData) => void;
+  // New props for POI Mode
+  mode?: 'route' | 'poi-only';
+  onSavePoi?: (poi: Partial<POI> & { location: { lat: number, lng: number } }) => void;
+  apiKey?: string; // Kept for compatibility
+  onSaveRoute?: (route: any) => void; // Legacy
 }
 
 function MapEvents({ onMapClick }: { onMapClick: (e: L.LeafletMouseEvent) => void }) {
@@ -145,19 +177,51 @@ function MapEvents({ onMapClick }: { onMapClick: (e: L.LeafletMouseEvent) => voi
   return null;
 }
 
-export default function WebMapEditor({ initialRouteData, onRouteDataChange }: WebMapEditorProps) {
+export default function WebMapEditor({ 
+  initialRouteData, 
+  onRouteDataChange,
+  mode = 'route', // Default to route mode
+  onSavePoi
+}: WebMapEditorProps) {
   const [waypoints, setWaypoints] = useState<Coordinate[]>(initialRouteData?.waypoints || []);
   const [pois, setPois] = useState<POI[]>(initialRouteData?.pois || []);
+  // For POI-only mode, we track a single temporary marker
+  const [tempPoi, setTempPoi] = useState<Partial<POI> & { location: { lat: number, lng: number } } | null>(null);
+
   const [selectedPoiIndex, setSelectedPoiIndex] = useState<number | null>(null);
   const [isGeneratingRoute, setIsGeneratingRoute] = useState(false);
 
-  // Update parent whenever state changes
+  // Sync state with props when they change
+  React.useEffect(() => {
+    if (initialRouteData) {
+      setWaypoints(initialRouteData.waypoints || []);
+      // If we are in route mode, we want to respect the passed POIs which might come from external selection
+      if (initialRouteData.pois) {
+        setPois(initialRouteData.pois);
+      }
+    }
+  }, [initialRouteData]);
+
+  // Update parent whenever state changes (Only in route mode)
   const updateParent = (newWaypoints: Coordinate[], newPois: POI[]) => {
-    onRouteDataChange({ waypoints: newWaypoints, pois: newPois });
+    if (mode === 'route') {
+      onRouteDataChange({ waypoints: newWaypoints, pois: newPois });
+    }
   };
 
   const handleMapClick = (e: L.LeafletMouseEvent) => {
-    // Add POI on click
+    if (mode === 'poi-only') {
+      // restricted to single point creation
+      setTempPoi({
+        title: '',
+        description: '',
+        images: [],
+        location: { lat: e.latlng.lat, lng: e.latlng.lng }
+      });
+      return;
+    }
+
+    // Add POI on click (Route Mode)
     const newPoi: POI = {
       latitude: e.latlng.lat,
       longitude: e.latlng.lng,
@@ -312,76 +376,81 @@ export default function WebMapEditor({ initialRouteData, onRouteDataChange }: We
     updateParent([], []);
   };
 
-  const center = pois.length > 0 
-    ? [pois[0].latitude, pois[0].longitude] 
-    : waypoints.length > 0
-    ? [waypoints[0].latitude, waypoints[0].longitude]
-    : [40.416775, -3.703790]; // Default to Madrid
+  const center = tempPoi 
+    ? [tempPoi.location.lat, tempPoi.location.lng]
+    : pois.length > 0 
+      ? [pois[0].latitude, pois[0].longitude] 
+      : waypoints.length > 0
+      ? [waypoints[0].latitude, waypoints[0].longitude]
+      : [40.416775, -3.703790];
 
   return (
     <View style={styles.container}>
-      <View style={styles.controls}>
-        <Text style={styles.instructions}>
-          📍 Clic derecho en el mapa para añadir puntos de interés (POIs).
-        </Text>
-        
-        {/* POI List */}
-        {pois.length > 0 && (
-          <View style={styles.poiList}>
-            <Text style={styles.poiListTitle}>Puntos de Interés ({pois.length}):</Text>
-            {pois.map((poi, index) => (
-              <View key={index} style={styles.poiItem}>
-                <Text style={styles.poiNumber}>{index + 1}</Text>
-                <Text style={styles.poiTitle} numberOfLines={1}>{poi.title}</Text>
-                <View style={styles.poiButtons}>
-                  <TouchableOpacity 
-                    onPress={() => movePoi(index, 'up')} 
-                    disabled={index === 0}
-                    style={{ marginRight: 5 }}
-                  >
-                    <Text style={{ fontSize: 16, color: index === 0 ? '#ccc' : '#000' }}>↑</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity 
-                    onPress={() => movePoi(index, 'down')} 
-                    disabled={index === pois.length - 1}
-                  >
-                   <Text style={{ fontSize: 16, color: index === pois.length - 1 ? '#ccc' : '#000' }}>↓</Text>
-                  </TouchableOpacity>
+      {/* Controls only for route mode */}
+      {mode === 'route' && (
+        <View style={styles.controls}>
+          <Text style={styles.instructions}>
+            📍 Clic derecho en el mapa para añadir puntos de interés (POIs).
+          </Text>
+          
+          {/* POI List */}
+          {pois.length > 0 && (
+            <View style={styles.poiList}>
+              <Text style={styles.poiListTitle}>Puntos de Interés ({pois.length}):</Text>
+              {pois.map((poi, index) => (
+                <View key={index} style={styles.poiItem}>
+                  <Text style={styles.poiNumber}>{index + 1}</Text>
+                  <Text style={styles.poiTitle} numberOfLines={1}>{poi.title}</Text>
+                  <View style={styles.poiButtons}>
+                    <TouchableOpacity 
+                      onPress={() => movePoi(index, 'up')} 
+                      disabled={index === 0}
+                      style={{ marginRight: 5 }}
+                    >
+                      <Text style={{ fontSize: 16, color: index === 0 ? '#ccc' : '#000' }}>↑</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity 
+                      onPress={() => movePoi(index, 'down')} 
+                      disabled={index === pois.length - 1}
+                    >
+                     <Text style={{ fontSize: 16, color: index === pois.length - 1 ? '#ccc' : '#000' }}>↓</Text>
+                    </TouchableOpacity>
+                  </View>
                 </View>
-              </View>
-            ))}
-          </View>
-        )}
-
-        {/* Route Generation - Optional */}
-        {pois.length >= 2 && (
-          <View style={styles.routeSection}>
-            <Text style={styles.routeSectionTitle}>🛤️ Generación de Ruta (Opcional)</Text>
-            <Text style={styles.routeSectionDescription}>
-              Si deseas conectar los POIs con una ruta de navegación:
-            </Text>
-            <View style={styles.buttonGroup}>
-              <Button 
-                title={isGeneratingRoute ? "Generando..." : "Generar Ruta"} 
-                onPress={() => generateRoute(false)} 
-                disabled={isGeneratingRoute}
-              />
-              <View style={{ width: 10 }} />
-              <Button 
-                title="Optimizar y Generar" 
-                onPress={() => generateRoute(true)} 
-                disabled={isGeneratingRoute}
-                color="#2196F3"
-              />
+              ))}
             </View>
-          </View>
-        )}
+          )}
 
-        {/* Clear Button */}
-        <View style={styles.clearSection}>
-          <Button title="🗑️ Limpiar Todo" onPress={clearAll} color="#f44336" />
+          {/* Route Generation - Optional */}
+          {pois.length >= 2 && (
+            <View style={styles.routeSection}>
+              <Text style={styles.routeSectionTitle}>🛤️ Generación de Ruta (Opcional)</Text>
+              <Text style={styles.routeSectionDescription}>
+                Si deseas conectar los POIs con una ruta de navegación:
+              </Text>
+              <View style={styles.buttonGroup}>
+                <Button 
+                  title={isGeneratingRoute ? "Generando..." : "Generar Ruta"} 
+                  onPress={() => generateRoute(false)} 
+                  disabled={isGeneratingRoute}
+                />
+                <View style={{ width: 10 }} />
+                <Button 
+                  title="Optimizar y Generar" 
+                  onPress={() => generateRoute(true)} 
+                  disabled={isGeneratingRoute}
+                  color="#2196F3"
+                />
+              </View>
+            </View>
+          )}
+
+          {/* Clear Button */}
+          <View style={styles.clearSection}>
+            <Button title="🗑️ Limpiar Todo" onPress={clearAll} color="#f44336" />
+          </View>
         </View>
-      </View>
+      )}
 
       <View style={styles.mapContainer}>
         {/* @ts-ignore: Leaflet types mismatch with React Native Web */}
@@ -392,9 +461,10 @@ export default function WebMapEditor({ initialRouteData, onRouteDataChange }: We
           />
           <MapEvents onMapClick={handleMapClick} />
           
-          <Polyline positions={waypoints.map(w => [w.latitude, w.longitude])} />
+          {mode === 'route' && <Polyline positions={waypoints.map(w => [w.latitude, w.longitude])} />}
 
-          {pois.map((poi, index) => (
+          {/* Route Mode Markers */}
+          {mode === 'route' && pois.map((poi, index) => (
             <Marker
               key={index}
               position={[poi.latitude, poi.longitude]}
@@ -420,12 +490,14 @@ export default function WebMapEditor({ initialRouteData, onRouteDataChange }: We
                     value={poi.title}
                     onChangeText={(text) => updatePoiDetails(index, 'title', text)}
                     style={{ width: '100%', marginBottom: 5, fontWeight: 'bold', borderBottomWidth: 1, borderColor: '#ccc', padding: 2 }}
+                    placeholder="Título"
                   />
                   <TextInput
                     value={poi.description}
                     onChangeText={(text) => updatePoiDetails(index, 'description', text)}
                     multiline
                     style={{ width: '100%', height: 60, marginBottom: 5, borderWidth: 1, borderColor: '#eee', padding: 5 }}
+                    placeholder="Descripción"
                   />
                   
                   {/* Add image URL */}
@@ -448,6 +520,72 @@ export default function WebMapEditor({ initialRouteData, onRouteDataChange }: We
               </Popup>
             </Marker>
           ))}
+
+          {/* POI Only Mode Marker */}
+          {mode === 'poi-only' && tempPoi && (
+             <Marker
+                position={[tempPoi.location.lat, tempPoi.location.lng]}
+                draggable={true}
+                eventHandlers={{
+                  dragend: (e) => {
+                    const marker = e.target;
+                    const pos = marker.getLatLng();
+                    setTempPoi({ ...tempPoi, location: { lat: pos.lat, lng: pos.lng } });
+                  }
+                }}
+             >
+                <Popup>
+                   <View style={{ minWidth: 250 }}>
+                      <Text style={{ fontWeight: 'bold', marginBottom: 10 }}>Nuevo Punto de Interés</Text>
+                      
+                       <TextInput
+                        value={tempPoi.title}
+                        onChangeText={(text) => setTempPoi({...tempPoi, title: text})}
+                        style={{ width: '100%', marginBottom: 8, borderWidth: 1, borderColor: '#ddd', padding: 8, borderRadius: 4 }}
+                        placeholder="Título del POI"
+                      />
+                      
+                      <TextInput
+                        value={tempPoi.description}
+                        onChangeText={(text) => setTempPoi({...tempPoi, description: text})}
+                        multiline
+                        style={{ width: '100%', height: 80, marginBottom: 8, borderWidth: 1, borderColor: '#ddd', padding: 8, borderRadius: 4 }}
+                        placeholder="Descripción corta"
+                      />
+
+                       {/* Image URL for new POI */}
+                       <View style={{ marginBottom: 10 }}>
+                        <TextInput
+                          placeholder="URL de Imagen (Opcional)"
+                          style={{ width: '100%', borderWidth: 1, borderColor: '#ddd', padding: 8, borderRadius: 4, marginBottom: 5 }}
+                          onSubmitEditing={(e) => {
+                             const url = e.nativeEvent.text;
+                             if(url) setTempPoi({...tempPoi, images: [...(tempPoi.images || []), url]});
+                             e.currentTarget.clear();
+                          }}
+                        />
+                        {/* Preview images */}
+                        <View style={{ flexDirection: 'row', gap: 5, flexWrap: 'wrap' }}>
+                           {tempPoi.images?.map((img, i) => (
+                              <img key={i} src={img} style={{ width: 40, height: 40, objectFit: 'cover' }} />
+                           ))}
+                        </View>
+                      </View>
+
+                      <Button 
+                        title="Guardar POI" 
+                        onPress={() => {
+                           if(onSavePoi) {
+                              onSavePoi(tempPoi);
+                              setTempPoi(null); // Clear after save
+                           }
+                        }} 
+                      />
+                   </View>
+                </Popup>
+             </Marker>
+          )}
+
         </MapContainer>
       </View>
     </View>

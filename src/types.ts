@@ -8,27 +8,34 @@ export type Profile = {
 export type Coordinate = {
   latitude: number;
   longitude: number;
+  time?: number; // timestamp for GPX based routes
 };
 
-export type POI = Coordinate & {
+export type POI = {
+  id: string; // Now required as it's a DB entity
+  latitude: number;
+  longitude: number;
   title: string;
   description: string;
-  images?: string[]; // URLs de las imágenes
+  images?: string[];
+  created_at?: string;
 };
 
 export type RouteData = {
   waypoints: Coordinate[];
-  pois: POI[];
-  coordinates?: Coordinate[]; // Legacy support
+  // Legacy POIs inside JSON (deprecated for editing, used for display if synced)
+  pois?: POI[]; 
 };
 
 export type Tour = {
   id: string;
   name: string;
   description: string;
-  route_data: RouteData; // JSONB for coordinates
+  route_data: RouteData; 
   created_by: string;
   created_at: string;
+  // Resolved POIs from relation
+  tour_pois?: (POI & { order: number })[];
 };
 
 export type QR = {

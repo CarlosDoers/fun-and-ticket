@@ -1,22 +1,46 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, StyleSheet, Alert, 
-  TouchableOpacity, ScrollView, ActivityIndicator 
+  TouchableOpacity, ScrollView, ActivityIndicator, Modal, FlatList
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { supabase } from '../../../src/lib/supabase';
 import { useAuth } from '../../../src/lib/auth';
 import WebMapEditor from '../../../src/components/WebMapEditor';
-import { RouteData } from '../../../src/types';
+import { RouteData, POI } from '../../../src/types';
 import { colors } from '../../../src/lib/theme';
 import { Feather } from '@expo/vector-icons';
 
 export default function CreateTour() {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
-  const [routeData, setRouteData] = useState<RouteData>({ waypoints: [], pois: [] });
+  // We keep waypoints for the path, but track selected POIs separately
+  const [routeWaypoints, setRouteWaypoints] = useState<any[]>([]); 
+  const [selectedPois, setSelectedPois] = useState<POI[]>([]);
+  
   const [loading, setLoading] = useState(false);
+  const [globalPois, setGlobalPois] = useState<POI[]>([]);
+  const [showPoiSelector, setShowPoiSelector] = useState(false);
+  
   const { user } = useAuth();
   const router = useRouter();
+
+  useEffect(() => {
+    fetchGlobalPois();
+  }, []);
+
+  async function fetchGlobalPois() {
+    const { data, error } = await supabase.from('pois').select('*').order('title');
+    if (error) console.error('Error fetching global POIs:', error);
+    else setGlobalPois(data || []);
+  }
+
+  const togglePoiSelection = (poi: POI) => {
+    if (selectedPois.find(p => p.id === poi.id)) {
+      setSelectedPois(selectedPois.filter(p => p.id !== poi.id));
+    } else {
+      setSelectedPois([...selectedPois, poi]);
+    }
+  };
 
   async function createTour() {
     if (!name.trim()) {
@@ -29,10 +53,10 @@ export default function CreateTour() {
       return;
     }
 
-    if (routeData.pois.length === 0) {
+    if (selectedPois.length === 0) {
       Alert.alert(
         'Sin puntos de interés',
-        'No has añadido ningún punto de interés. ¿Deseas continuar?',
+        'No has seleccionado ningún punto de interés. ¿Deseas continuar?',
         [
           { text: 'Cancelar', style: 'cancel' },
           { text: 'Continuar', onPress: () => saveTour() }
@@ -47,25 +71,57 @@ export default function CreateTour() {
   async function saveTour() {
     setLoading(true);
     try {
-      const { error } = await supabase.from('tours').insert({
-        name,
-        description,
-        created_by: user?.id,
-        route_data: routeData,
-      });
+      // 1. Create Tour
+      // We still save route_data JSON for compatibility with the map viewer (for now)
+      // containing the waypoints and the selected POIs (as a snapshot)
+      const routeDataSnapshot: RouteData = {
+        waypoints: routeWaypoints,
+        pois: selectedPois, 
+      };
 
-      if (error) throw error;
+      const { data: tourData, error: tourError } = await supabase
+        .from('tours')
+        .insert({
+          name,
+          description,
+          created_by: user?.id,
+          route_data: routeDataSnapshot,
+        })
+        .select()
+        .single();
+
+      if (tourError) throw tourError;
+
+      // 2. Link POIs in tour_pois table
+      if (selectedPois.length > 0 && tourData) {
+        const tourPoisInserts = selectedPois.map((poi, index) => ({
+          tour_id: tourData.id,
+          poi_id: poi.id,
+          order: index, // Simple ordering based on selection/list order
+        }));
+
+        const { error: linkError } = await supabase
+          .from('tour_pois')
+          .insert(tourPoisInserts);
+
+        if (linkError) throw linkError;
+      }
+
       Alert.alert('Éxito', 'Tour creado correctamente');
       router.back();
     } catch (error: any) {
+      console.error(error);
       Alert.alert('Error', error.message);
     } finally {
       setLoading(false);
     }
   }
 
-  const poiCount = routeData.pois?.length || 0;
-  const hasRoute = (routeData.waypoints?.length || 0) > 0;
+  // Combined data for MapEditor visualization
+  const mapRouteData: RouteData = {
+    waypoints: routeWaypoints,
+    pois: selectedPois
+  };
 
   return (
     <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
@@ -100,7 +156,7 @@ export default function CreateTour() {
             <Text style={styles.label}>Descripción *</Text>
             <TextInput
               style={[styles.input, styles.textArea]}
-              placeholder="Describe el tour, qué verán los visitantes, duración estimada..."
+              placeholder="Describe el tour..."
               placeholderTextColor="#999"
               value={description}
               onChangeText={setDescription}
@@ -110,34 +166,59 @@ export default function CreateTour() {
           </View>
         </View>
 
-        {/* Map Section */}
+        {/* POI Selection Section */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Puntos de Interés</Text>
-            {poiCount > 0 && (
-              <View style={styles.badge}>
-                <Feather name="map-pin" size={12} color={colors.primary} style={{ marginRight: 4 }} />
-                <Text style={styles.badgeText}>{poiCount} POIs</Text>
-              </View>
-            )}
+             <TouchableOpacity 
+              style={styles.addPoiButton}
+              onPress={() => setShowPoiSelector(true)}
+             >
+               <Feather name="plus" size={16} color="#fff" />
+               <Text style={styles.addPoiButtonText}>Seleccionar POIs</Text>
+             </TouchableOpacity>
           </View>
           
           <Text style={styles.sectionDescription}>
-            Haz clic derecho en el mapa para añadir puntos de interés. 
-            La generación de ruta es opcional.
+            Selecciona los puntos de interés de la lista global para añadirlos a este tour.
           </Text>
 
-          {hasRoute && (
-            <View style={styles.routeInfo}>
-              <Feather name="map" size={18} color="#2e7d32" style={{ marginRight: 8 }} />
-              <Text style={styles.routeInfoText}>Ruta generada con {routeData.waypoints?.length} puntos</Text>
-            </View>
+          {selectedPois.length === 0 ? (
+             <View style={styles.emptyPois}>
+               <Text style={styles.emptyPoisText}>No hay POIs seleccionados.</Text>
+             </View>
+          ) : (
+             <View style={styles.selectedPoisList}>
+               {selectedPois.map((poi, index) => (
+                 <View key={poi.id} style={styles.selectedPoiItem}>
+                   <Text style={{fontWeight: 'bold', marginRight: 8}}>{index + 1}.</Text>
+                   <Text style={{flex: 1}}>{poi.title}</Text>
+                   <TouchableOpacity onPress={() => togglePoiSelection(poi)}>
+                     <Feather name="x" size={16} color="#ff4444" />
+                   </TouchableOpacity>
+                 </View>
+               ))}
+             </View>
           )}
+        </View>
 
-          <WebMapEditor 
-            onRouteDataChange={setRouteData}
-            initialRouteData={routeData}
-          />
+        {/* Map Section */}
+        <View style={styles.section}>
+           <Text style={styles.sectionTitle}>Vista Previa y Ruta</Text>
+           <Text style={styles.sectionDescription}>
+             Dibuja la ruta, la generación automática usará los POIs seleccionados.
+           </Text>
+           
+           <WebMapEditor 
+             initialRouteData={mapRouteData}
+             onRouteDataChange={(newData) => setRouteWaypoints(newData.waypoints)}
+             // We pass 'route' mode but since we control POIs via logic, 
+             // we rely on the editor correctly displaying passed `pois` without allowing new ones via click effectively?
+             // Actually, regular route mode adds POIs on click. We might want to DISABLE that or ignore it.
+             // But existing WebMapEditor adds POI on click in 'route' mode.
+             // We should strictly ignore new POIs from the map if we want to enforce selection only.
+             // For now, let's strictly use the 'routeWaypoints' from the map callback and ignore 'pois' it returns.
+           />
         </View>
 
         {/* Actions */}
@@ -153,15 +234,56 @@ export default function CreateTour() {
               <Text style={styles.submitButtonText}>Crear Tour</Text>
             )}
           </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.cancelButton}
-            onPress={() => router.push('/(dashboard)/tours')}
-          >
-            <Text style={styles.cancelButtonText}>Cancelar</Text>
-          </TouchableOpacity>
         </View>
       </View>
+
+      {/* POI Selector Modal */}
+      <Modal visible={showPoiSelector} animationType="slide" transparent>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Seleccionar Puntos de Interés</Text>
+              <TouchableOpacity onPress={() => setShowPoiSelector(false)}>
+                <Feather name="x" size={24} color="#333" />
+              </TouchableOpacity>
+            </View>
+            
+            <FlatList
+              data={globalPois}
+              keyExtractor={item => item.id}
+              contentContainerStyle={{padding: 20}}
+              renderItem={({item}) => {
+                const isSelected = selectedPois.find(p => p.id === item.id);
+                return (
+                  <TouchableOpacity 
+                    style={[styles.poiOption, isSelected && styles.poiOptionSelected]}
+                    onPress={() => togglePoiSelection(item)}
+                  >
+                    <View style={{flex: 1}}>
+                      <Text style={[styles.poiOptionTitle, isSelected && {color: colors.primary, fontWeight: 'bold'}]}>
+                        {item.title}
+                      </Text>
+                      <Text numberOfLines={1} style={{fontSize: 12, color: '#666'}}>
+                        {item.description}
+                      </Text>
+                    </View>
+                    {isSelected && <Feather name="check" size={20} color={colors.primary} />}
+                  </TouchableOpacity>
+                );
+              }}
+              ListEmptyComponent={<Text style={{textAlign: 'center', marginTop: 20}}>No hay POIs globales disponibles.</Text>}
+            />
+            
+            <TouchableOpacity 
+              style={styles.modalDoneButton}
+              onPress={() => setShowPoiSelector(false)}
+            >
+              <Text style={styles.modalDoneButtonText}>Listo</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
     </ScrollView>
   );
 }
@@ -213,13 +335,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: 16,
   },
   sectionTitle: {
     fontSize: 18,
     fontWeight: 'bold',
     color: '#333',
-    marginBottom: 16,
   },
   sectionDescription: {
     fontSize: 14,
@@ -249,30 +370,6 @@ const styles = StyleSheet.create({
     height: 100,
     textAlignVertical: 'top',
   },
-  badge: {
-    backgroundColor: '#f0f0ff',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 8,
-  },
-  badgeText: {
-    fontSize: 12,
-    color: colors.primary,
-    fontWeight: '600',
-  },
-  routeInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#f0fff4',
-    padding: 12,
-    borderRadius: 8,
-    marginBottom: 16,
-  },
-  routeInfoText: {
-    fontSize: 14,
-    color: '#2e7d32',
-    fontWeight: '500',
-  },
   actions: {
     gap: 12,
     marginBottom: 40,
@@ -291,12 +388,94 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: 'bold',
   },
-  cancelButton: {
-    padding: 16,
+  addPoiButton: {
+    backgroundColor: colors.primary,
+    flexDirection: 'row',
     alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+    gap: 6
   },
-  cancelButtonText: {
-    color: '#666',
+  addPoiButtonText: {
+    color: '#fff',
+    fontWeight: '600',
+    fontSize: 14
+  },
+  emptyPois: {
+    padding: 20,
+    backgroundColor: '#f9f9f9',
+    borderRadius: 8,
+    alignItems: 'center'
+  },
+  emptyPoisText: {
+    color: '#999'
+  },
+  selectedPoisList: {
+    gap: 8
+  },
+  selectedPoiItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 12,
+    backgroundColor: '#f0f4ff',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#d0e0ff'
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20
+  },
+  modalContent: {
+    backgroundColor: '#fff',
+    width: '100%',
+    maxWidth: 500,
+    maxHeight: '80%',
+    borderRadius: 16,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOpacity: 0.2,
+    shadowRadius: 10,
+    elevation: 10
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee'
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: 'bold'
+  },
+  poiOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0'
+  },
+  poiOptionSelected: {
+    backgroundColor: '#f0f9ff'
+  },
+  poiOptionTitle: {
     fontSize: 16,
+    marginBottom: 4
   },
+  modalDoneButton: {
+    padding: 20,
+    backgroundColor: colors.primary,
+    alignItems: 'center'
+  },
+  modalDoneButtonText: {
+    color: '#fff',
+    fontWeight: 'bold',
+    fontSize: 16
+  }
 });

@@ -3,7 +3,7 @@ import { StyleSheet, View, Text, Image, TouchableOpacity, ScrollView, ActivityIn
 import { SafeAreaView } from 'react-native-safe-area-context';
 import RNMapView, { Marker, Polyline, PROVIDER_GOOGLE, Circle } from 'react-native-maps';
 import * as Location from 'expo-location';
-import { Audio } from 'expo-av';
+import { useAudioPlayer, useAudioPlayerStatus, setAudioModeAsync } from 'expo-audio';
 import { RouteData, POI } from '../types';
 import { colors } from '../lib/theme';
 import { PlayCircleIcon, PauseCircleIcon } from 'lucide-react-native';
@@ -12,77 +12,41 @@ import { Icon } from '@gluestack-ui/themed'; // Just for the Icon wrapper if nee
 // Full-screen Modal for POI Details with working carousel
 function POIDetailModal({ poi, visible, onClose }: { poi: POI | null; visible: boolean; onClose: () => void }) {
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [sound, setSound] = useState<Audio.Sound | null>(null);
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [loadingAudio, setLoadingAudio] = useState(false);
+  
+  const player = useAudioPlayer(poi?.audio_url ? { uri: poi.audio_url } : null);
+  const status = useAudioPlayerStatus(player);
 
   // Reset state when POI changes or closes
   useEffect(() => {
     if (!visible) {
-      stopAndUnload();
+      player.pause();
+      player.seekTo(0);
     }
     setCurrentIndex(0);
   }, [visible, poi]);
 
-  // Cleanup sound
+  // Update player source when poi changes
   useEffect(() => {
-    return () => {
-      stopAndUnload();
-    };
+    if (poi?.audio_url) {
+      player.replace({ uri: poi.audio_url });
+    }
+  }, [poi]);
+
+  // Configure audio mode once
+  useEffect(() => {
+    setAudioModeAsync({
+      playsInSilentMode: true,
+      shouldPlayInBackground: false,
+    });
   }, []);
 
-  async function stopAndUnload() {
-    if (sound) {
-      await sound.stopAsync();
-      await sound.unloadAsync();
-      setSound(null);
-      setIsPlaying(false);
-    }
-  }
-
-  async function togglePlayback() {
+  function togglePlayback() {
     if (!poi?.audio_url) return;
 
-    try {
-      if (sound) {
-        if (isPlaying) {
-          await sound.pauseAsync();
-          setIsPlaying(false);
-        } else {
-          await sound.playAsync();
-          setIsPlaying(true);
-        }
-      } else {
-        setLoadingAudio(true);
-        console.log('Loading sound form:', poi.audio_url);
-        
-        // Improve audio mode needed for iOS often
-        await Audio.setAudioModeAsync({
-          playsInSilentModeIOS: true,
-          staysActiveInBackground: false,
-        });
-
-        const { sound: newSound } = await Audio.Sound.createAsync(
-          { uri: poi.audio_url },
-          { shouldPlay: true }
-        );
-        
-        newSound.setOnPlaybackStatusUpdate((status) => {
-          if (status.isLoaded) {
-             if (status.didJustFinish) {
-               setIsPlaying(false);
-               newSound.setPositionAsync(0);
-             }
-          }
-        });
-
-        setSound(newSound);
-        setIsPlaying(true);
-        setLoadingAudio(false);
-      }
-    } catch (error) {
-      console.error('Error playing audio', error);
-      setLoadingAudio(false);
+    if (status.playing) {
+      player.pause();
+    } else {
+      player.play();
     }
   }
 
@@ -160,18 +124,18 @@ function POIDetailModal({ poi, visible, onClose }: { poi: POI | null; visible: b
                   <TouchableOpacity 
                     style={styles.playButton} 
                     onPress={togglePlayback}
-                    disabled={loadingAudio}
+                    disabled={!status.isLoaded && !status.isBuffering}
                   >
-                    {loadingAudio ? (
+                    {status.isBuffering ? (
                       <ActivityIndicator color="white" />
                     ) : (
-                       isPlaying ? 
+                       status.playing ? 
                        <PauseCircleIcon size={32} color="white" /> : 
                        <PlayCircleIcon size={32} color="white" />
                     )}
                   </TouchableOpacity>
                   <Text style={styles.audioText}>
-                    {isPlaying ? 'Reproduciendo audio...' : 'Escuchar audio guía'}
+                    {status.playing ? 'Reproduciendo audio...' : 'Escuchar audio guía'}
                   </Text>
                 </View>
               )}

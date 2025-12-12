@@ -26,7 +26,7 @@ Usuario escanea QR → Se valida el código → Se muestra el mapa del tour con 
 | **react-native-maps** | Mapas nativos (iOS/Android) |
 | **react-leaflet** | Mapas para versión Web |
 | **expo-camera** | Escaneo de códigos QR |
-| **expo-av** | Reproducción de Audio |
+| **expo-audio** | Reproducción de Audio |
 | **Gluestack UI** | Sistema de componentes UI (v2) |
 
 ---

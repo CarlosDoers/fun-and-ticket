@@ -8,7 +8,7 @@ import { POI } from '../../../src/types';
 import { colors } from '../../../src/lib/theme';
 import WebMapEditor from '../../../src/components/WebMapEditor';
 import * as DocumentPicker from 'expo-document-picker';
-import { Audio } from 'expo-av';
+import { useAudioPlayer } from 'expo-audio';
 
 import { 
   Box, 
@@ -178,21 +178,13 @@ export default function POIManagementScreen() {
   const [uploading, setUploading] = useState(false);
   const inputRef = useRef<any>(null);
   
-  const [sound, setSound] = useState<Audio.Sound | null>(null);
+  const player = useAudioPlayer(null);
 
   useEffect(() => {
     if (activeTab === 'list') {
       fetchPois();
     }
   }, [activeTab]);
-
-  useEffect(() => {
-    return sound
-      ? () => {
-          sound.unloadAsync();
-        }
-      : undefined;
-  }, [sound]);
 
   async function fetchPois() {
     setLoading(true);
@@ -274,12 +266,8 @@ export default function POIManagementScreen() {
 
   async function playSound(url: string) {
     try {
-      if (sound) {
-        await sound.unloadAsync();
-      }
-      const { sound: newSound } = await Audio.Sound.createAsync({ uri: url });
-      setSound(newSound);
-      await newSound.playAsync();
+      player.replace({ uri: url });
+      player.play();
     } catch (error) {
       console.error('Error playing sound', error);
       Alert.alert('Error', 'No se pudo reproducir el audio');

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, View, Text, Image, TouchableOpacity, ScrollView, ActivityIndicator, Modal } from 'react-native';
+import { StyleSheet, View, Text, Image, TouchableOpacity, ScrollView, ActivityIndicator, Modal, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import RNMapView, { Marker, Polyline, PROVIDER_GOOGLE, Circle } from 'react-native-maps';
 import * as Location from 'expo-location';
@@ -247,7 +247,7 @@ export default function MapView({ routeData, style }: MapViewProps) {
     <>
       <RNMapView
         style={[styles.map, style]}
-        provider={PROVIDER_GOOGLE}
+        provider={Platform.OS === 'ios' ? undefined : PROVIDER_GOOGLE}
         initialRegion={region}
         showsUserLocation={true}
         showsMyLocationButton={true}

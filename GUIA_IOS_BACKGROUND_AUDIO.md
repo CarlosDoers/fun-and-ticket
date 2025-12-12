@@ -77,5 +77,18 @@ Una vez que la terminal diga **"Build Succeeded"** e instale la app en tu iPhone
 
 ## Solución de Problemas Comunes
 
+*   **Error "Xcode must be fully installed":** Aunque tengas Xcode instalado, a veces falta seleccionar la ruta de las herramientas de línea de comandos.
+    1.  Abre la terminal y ejecuta:
+        ```bash
+        sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
+        ```
+        (Te pedirá la contraseña de tu Mac).
+    2.  Luego, asegúrate de haber aceptado la licencia:
+        ```bash
+        sudo xcodebuild -license
+        ```
+        (Presiona `Enter` para verla, `q` para salir, y escribe `agree` para aceptar).
+    3.  Vuelve a intentar `npx expo run:ios --device`.
+
 *   **Error "Code Signing Error":** Si falla la firma, abre el archivo `ios/funandtickets.xcworkspace` (o el nombre de tu proyecto) haciendo doble clic. Esto abrirá Xcode. Haz clic en el proyecto a la izquierda (icono azul), ve a la pestaña "Signing & Capabilities", selecciona tu equipo en "Team" y asegúrate de que no haya errores rojos. Luego vuelve a intentar el comando en la terminal.
 *   **Dispositivo no encontrado:** Asegúrate de que el iPhone esté desbloqueado y conectado por cable. A veces desconectar y volver a conectar ayuda.

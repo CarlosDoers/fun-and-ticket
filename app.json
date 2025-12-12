@@ -18,6 +18,9 @@
         "UIBackgroundModes": [
           "audio"
         ]
+      },
+      "config": {
+        "googleMapsApiKey": "TU_API_KEY_AQUI"
       }
     },
     "android": {

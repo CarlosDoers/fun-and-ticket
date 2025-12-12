@@ -2,6 +2,7 @@ import { Slot, useRouter, useSegments } from 'expo-router';
 import { AuthProvider, useAuth } from '../src/lib/auth';
 import { useEffect } from 'react';
 import { View, ActivityIndicator, Platform } from 'react-native';
+import { setAudioModeAsync } from 'expo-audio';
 
 function InitialLayout() {
   const { session, loading, isAdmin, isGuide } = useAuth();
@@ -9,6 +10,12 @@ function InitialLayout() {
   const router = useRouter();
 
   useEffect(() => {
+    // Configure global audio mode for background playback
+    setAudioModeAsync({
+      playsInSilentMode: true,
+      shouldPlayInBackground: true,
+    }).catch(err => console.log('Failed to set audio mode', err));
+
     if (Platform.OS === 'web') {
       const linkId = 'leaflet-css';
       if (!document.getElementById(linkId)) {

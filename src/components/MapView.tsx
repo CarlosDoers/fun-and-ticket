@@ -32,14 +32,6 @@ function POIDetailModal({ poi, visible, onClose }: { poi: POI | null; visible: b
     }
   }, [poi]);
 
-  // Configure audio mode once
-  useEffect(() => {
-    setAudioModeAsync({
-      playsInSilentMode: true,
-      shouldPlayInBackground: false,
-    });
-  }, []);
-
   function togglePlayback() {
     if (!poi?.audio_url) return;
 

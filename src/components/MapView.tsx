@@ -195,7 +195,7 @@ export default function MapView({ routeData, style }: MapViewProps) {
   const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>(null);
   const [locationError, setLocationError] = useState<string | null>(null);
 
-  const waypoints = routeData?.waypoints || routeData?.coordinates || [];
+  const waypoints = routeData?.waypoints || [];
   const pois = routeData?.pois || [];
 
   // Request location permissions and start tracking

@@ -223,6 +223,7 @@ export default function WebMapEditor({
 
     // Add POI on click (Route Mode)
     const newPoi: POI = {
+      id: `temp-${Date.now()}`, // Temporary ID for new POIs
       latitude: e.latlng.lat,
       longitude: e.latlng.lng,
       title: `Point ${pois.length + 1}`,
@@ -507,7 +508,7 @@ export default function WebMapEditor({
                       style={{ width: '100%', borderWidth: 1, borderColor: '#ddd', padding: 5, marginBottom: 5 }}
                       onSubmitEditing={(e) => {
                         addImageToPoi(index, e.nativeEvent.text);
-                        e.currentTarget.clear();
+                        // e.nativeEvent.text = '';
                       }}
                     />
                     <Text style={{ fontSize: 11, color: '#666' }}>
@@ -561,7 +562,8 @@ export default function WebMapEditor({
                           onSubmitEditing={(e) => {
                              const url = e.nativeEvent.text;
                              if(url) setTempPoi({...tempPoi, images: [...(tempPoi.images || []), url]});
-                             e.currentTarget.clear();
+                             // Clear input manually if needed, or use state
+                             // e.nativeEvent.text = ''; 
                           }}
                         />
                         {/* Preview images */}

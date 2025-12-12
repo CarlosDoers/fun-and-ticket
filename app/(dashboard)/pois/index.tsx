@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { 
   Alert, Image, Dimensions, Platform
 } from 'react-native';
@@ -8,7 +8,7 @@ import { POI } from '../../../src/types';
 import { colors } from '../../../src/lib/theme';
 import WebMapEditor from '../../../src/components/WebMapEditor';
 import * as DocumentPicker from 'expo-document-picker';
-import { Audio } from 'expo-audio';
+import { Audio } from 'expo-av';
 
 import { 
   Box, 
@@ -176,6 +176,7 @@ export default function POIManagementScreen() {
   const [editImages, setEditImages] = useState<string[]>([]);
   const [editAudio, setEditAudio] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
+  const inputRef = useRef<any>(null);
   
   const [sound, setSound] = useState<Audio.Sound | null>(null);
 
@@ -313,8 +314,8 @@ export default function POIManagementScreen() {
             <Text color={colors.brand.orange} size="sm">Haz clic en el mapa para situar un nuevo POI y guárdalo.</Text>
           </Box>
            <WebMapEditor 
-             apiKey="" 
-             initialRoute={{ waypoints: [], pois: [] }} 
+             initialRouteData={{ waypoints: [], pois: [] }} 
+             onRouteDataChange={() => {}}
              onSaveRoute={() => {}} 
              onSavePoi={(poi) => handleCreatePoi(poi)} 
              mode="poi-only" 
@@ -329,9 +330,9 @@ export default function POIManagementScreen() {
           ) : (
             <FlatList
               data={pois}
-              keyExtractor={(item) => item.id}
+              keyExtractor={(item: any) => item.id}
               contentContainerStyle={{ padding: 20, gap: 12 }}
-              renderItem={({ item }) => (
+              renderItem={({ item }: { item: any }) => (
                 <Box
                   bg={colors.surface}
                   p="$4"
@@ -466,12 +467,13 @@ export default function POIManagementScreen() {
                       <HStack space="sm" mb="$2">
                          <Input flex={1} variant="outline" borderWidth={1} borderColor={colors.border} bg={colors.inputBackground}>
                             <InputField 
+                              ref={inputRef}
                               placeholder="https://..." 
                               placeholderTextColor={colors.textMuted}
                               color={colors.textPrimary}
                               onSubmitEditing={(e) => {
                                 if(e.nativeEvent.text) setEditImages([...editImages, e.nativeEvent.text]);
-                                e.currentTarget.clear();
+                                inputRef.current?.clear();
                               }}
                             />
                          </Input>

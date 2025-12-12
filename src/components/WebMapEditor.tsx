@@ -5,6 +5,10 @@ import { RouteData } from '../types';
 interface WebMapEditorProps {
   initialRouteData?: RouteData;
   onRouteDataChange: (data: RouteData) => void;
+  mode?: 'route' | 'poi-only';
+  onSavePoi?: (poi: any) => void;
+  apiKey?: string;
+  onSaveRoute?: (route: any) => void;
 }
 
 export default function WebMapEditor(props: WebMapEditorProps) {

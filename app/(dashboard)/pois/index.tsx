@@ -8,7 +8,7 @@ import { POI } from '../../../src/types';
 import { colors } from '../../../src/lib/theme';
 import WebMapEditor from '../../../src/components/WebMapEditor';
 import * as DocumentPicker from 'expo-document-picker';
-import { Audio } from 'expo-av';
+import { Audio } from 'expo-audio';
 
 import { 
   Box, 

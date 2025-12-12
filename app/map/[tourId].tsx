@@ -5,7 +5,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { supabase } from '../../src/lib/supabase';
 import { Tour } from '../../src/types';
 import { colors } from '../../src/lib/theme';
-import { Feather } from '@expo/vector-icons';
+import { ArrowLeft, Home, MapPin } from 'lucide-react-native';
 
 export default function PublicMapScreen() {
   const { tourId } = useLocalSearchParams();
@@ -55,7 +55,7 @@ export default function PublicMapScreen() {
         <Text style={styles.errorText}>Tour no encontrado.</Text>
         <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-            <Feather name="arrow-left" size={20} color="#fff" />
+            <ArrowLeft size={20} color="#fff" />
             <Text style={styles.backButtonText}>Volver</Text>
           </View>
         </TouchableOpacity>
@@ -83,14 +83,14 @@ export default function PublicMapScreen() {
           style={styles.circleButton} 
           onPress={() => router.back()}
         >
-          <Feather name="arrow-left" size={24} color={colors.primary} />
+          <ArrowLeft size={24} color={colors.primary} />
         </TouchableOpacity>
 
         <TouchableOpacity 
           style={styles.circleButton} 
           onPress={() => router.replace('/')}
         >
-          <Feather name="home" size={24} color={colors.primary} />
+          <Home size={24} color={colors.primary} />
         </TouchableOpacity>
       </View>
 
@@ -99,7 +99,7 @@ export default function PublicMapScreen() {
         <Text style={styles.tourDescription}>{tour.description}</Text>
         {pois.length > 0 && (
           <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 8 }}>
-            <Feather name="map-pin" size={14} color={colors.primary} style={{ marginRight: 4 }} />
+            <MapPin size={14} color={colors.primary} style={{ marginRight: 4 }} />
             <Text style={styles.poiCount}>{pois.length} puntos de interés</Text>
           </View>
         )}

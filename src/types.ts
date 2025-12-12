@@ -1,48 +1,45 @@
-export type Profile = {
-  id: string;
-  email: string;
-  role: 'admin' | 'guide' | 'user';
-  created_at: string;
-};
-
 export type Coordinate = {
   latitude: number;
   longitude: number;
-  time?: number; // timestamp for GPX based routes
 };
 
 export type POI = {
-  id: string; // Now required as it's a DB entity
-  latitude: number;
-  longitude: number;
+  id: string; // Added to match Supabase structure
   title: string;
   description: string;
   images?: string[];
-  created_at?: string;
+  audio_url?: string | null; // URL to audio file
+  latitude: number;
+  longitude: number;
 };
 
 export type RouteData = {
   waypoints: Coordinate[];
-  // Legacy POIs inside JSON (deprecated for editing, used for display if synced)
-  pois?: POI[]; 
+  pois: POI[];
 };
 
 export type Tour = {
   id: string;
   name: string;
   description: string;
-  route_data: RouteData; 
+  route_data: RouteData; // JSONB in Supabase
   created_by: string;
   created_at: string;
-  // Resolved POIs from relation
-  tour_pois?: (POI & { order: number })[];
+  is_active: boolean;  // Added for soft delete/draft status
 };
 
 export type QR = {
   id: string;
   code: string;
   tour_id: string;
-  is_active: boolean;
-  expires_at?: string | null;
+  created_at: string;
+  is_active: boolean; 
+  expires_at?: string | null; // Optional expiration date
+};
+
+export type Profile = {
+  id: string;
+  email: string;
+  role: 'admin' | 'guide' | 'user';
   created_at: string;
 };

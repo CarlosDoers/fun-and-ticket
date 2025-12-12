@@ -1,15 +1,89 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, View, Text, Image, Pressable, Dimensions, Modal, TouchableOpacity, ScrollView, SafeAreaView, Alert } from 'react-native';
+import { StyleSheet, View, Text, Image, TouchableOpacity, ScrollView, SafeAreaView, ActivityIndicator, Modal } from 'react-native';
 import RNMapView, { Marker, Polyline, PROVIDER_GOOGLE, Circle } from 'react-native-maps';
 import * as Location from 'expo-location';
+import { Audio } from 'expo-av';
 import { RouteData, POI } from '../types';
 import { colors } from '../lib/theme';
-
-const { width: screenWidth } = Dimensions.get('window');
+import { PlayCircleIcon, PauseCircleIcon } from 'lucide-react-native';
+import { Icon } from '@gluestack-ui/themed'; // Just for the Icon wrapper if needed, or stick to native
 
 // Full-screen Modal for POI Details with working carousel
 function POIDetailModal({ poi, visible, onClose }: { poi: POI | null; visible: boolean; onClose: () => void }) {
   const [currentIndex, setCurrentIndex] = useState(0);
+  const [sound, setSound] = useState<Audio.Sound | null>(null);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [loadingAudio, setLoadingAudio] = useState(false);
+
+  // Reset state when POI changes or closes
+  useEffect(() => {
+    if (!visible) {
+      stopAndUnload();
+    }
+    setCurrentIndex(0);
+  }, [visible, poi]);
+
+  // Cleanup sound
+  useEffect(() => {
+    return () => {
+      stopAndUnload();
+    };
+  }, []);
+
+  async function stopAndUnload() {
+    if (sound) {
+      await sound.stopAsync();
+      await sound.unloadAsync();
+      setSound(null);
+      setIsPlaying(false);
+    }
+  }
+
+  async function togglePlayback() {
+    if (!poi?.audio_url) return;
+
+    try {
+      if (sound) {
+        if (isPlaying) {
+          await sound.pauseAsync();
+          setIsPlaying(false);
+        } else {
+          await sound.playAsync();
+          setIsPlaying(true);
+        }
+      } else {
+        setLoadingAudio(true);
+        console.log('Loading sound form:', poi.audio_url);
+        
+        // Improve audio mode needed for iOS often
+        await Audio.setAudioModeAsync({
+          playsInSilentModeIOS: true,
+          staysActiveInBackground: false,
+        });
+
+        const { sound: newSound } = await Audio.Sound.createAsync(
+          { uri: poi.audio_url },
+          { shouldPlay: true }
+        );
+        
+        newSound.setOnPlaybackStatusUpdate((status) => {
+          if (status.isLoaded) {
+             if (status.didJustFinish) {
+               setIsPlaying(false);
+               newSound.setPositionAsync(0);
+             }
+          }
+        });
+
+        setSound(newSound);
+        setIsPlaying(true);
+        setLoadingAudio(false);
+      }
+    } catch (error) {
+      console.error('Error playing audio', error);
+      setLoadingAudio(false);
+    }
+  }
 
   if (!poi) return null;
 
@@ -78,6 +152,29 @@ function POIDetailModal({ poi, visible, onClose }: { poi: POI | null; visible: b
             {/* POI Info */}
             <View style={styles.poiInfo}>
               <Text style={styles.poiTitle}>{poi.title || 'Punto de Interés'}</Text>
+              
+              {/* Audio Player */}
+              {poi.audio_url && (
+                <View style={styles.audioContainer}>
+                  <TouchableOpacity 
+                    style={styles.playButton} 
+                    onPress={togglePlayback}
+                    disabled={loadingAudio}
+                  >
+                    {loadingAudio ? (
+                      <ActivityIndicator color="white" />
+                    ) : (
+                       isPlaying ? 
+                       <PauseCircleIcon size={32} color="white" /> : 
+                       <PlayCircleIcon size={32} color="white" />
+                    )}
+                  </TouchableOpacity>
+                  <Text style={styles.audioText}>
+                    {isPlaying ? 'Reproduciendo audio...' : 'Escuchar audio guía'}
+                  </Text>
+                </View>
+              )}
+
               <Text style={styles.poiDescription}>{poi.description || 'Sin descripción'}</Text>
             </View>
           </ScrollView>
@@ -156,7 +253,7 @@ export default function MapView({ routeData, style }: MapViewProps) {
     setModalVisible(true);
   };
 
-  // Calculate region to fit all points
+  // Calculate region
   const allCoords = [...waypoints, ...pois];
   let region;
 
@@ -181,7 +278,6 @@ export default function MapView({ routeData, style }: MapViewProps) {
       longitudeDelta: Math.max(lngDelta, 0.01),
     };
   } else {
-    // Default to Madrid if no points
     region = {
       latitude: 40.416775,
       longitude: -3.703790,
@@ -196,15 +292,15 @@ export default function MapView({ routeData, style }: MapViewProps) {
         style={[styles.map, style]}
         provider={PROVIDER_GOOGLE}
         initialRegion={region}
+        showsUserLocation={true}
+        showsMyLocationButton={true}
       >
-        {/* Route polyline */}
         <Polyline
           coordinates={waypoints.map(w => ({ latitude: w.latitude, longitude: w.longitude }))}
           strokeColor={colors.routeColor}
           strokeWidth={4}
         />
 
-        {/* POI markers */}
         {pois.map((poi, index) => (
           <Marker
             key={index}
@@ -213,29 +309,8 @@ export default function MapView({ routeData, style }: MapViewProps) {
             onPress={() => handleMarkerPress(poi)}
           />
         ))}
-
-        {/* User location marker */}
-        {userLocation && (
-          <>
-            <Circle
-              center={userLocation}
-              radius={50}
-              strokeColor="rgba(66, 133, 244, 0.5)"
-              fillColor="rgba(66, 133, 244, 0.2)"
-            />
-            <Marker
-              coordinate={userLocation}
-              anchor={{ x: 0.5, y: 0.5 }}
-            >
-              <View style={styles.userMarker}>
-                <View style={styles.userMarkerInner} />
-              </View>
-            </Marker>
-          </>
-        )}
       </RNMapView>
 
-      {/* POI Detail Modal */}
       <POIDetailModal
         poi={selectedPoi}
         visible={modalVisible}
@@ -252,12 +327,6 @@ const styles = StyleSheet.create({
   map: {
     flex: 1,
   },
-  errorContainer: {
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#f0f0f0',
-  },
-  // Modal styles
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
@@ -287,7 +356,6 @@ const styles = StyleSheet.create({
     color: '#666',
     fontWeight: 'bold',
   },
-  // Image Carousel
   imageCarouselContainer: {
     position: 'relative',
     width: '100%',
@@ -295,6 +363,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     overflow: 'hidden',
     marginBottom: 16,
+    backgroundColor: '#eee',
   },
   carouselImage: {
     width: '100%',
@@ -338,9 +407,9 @@ const styles = StyleSheet.create({
     fontSize: 14,
     overflow: 'hidden',
   },
-  // POI Info
   poiInfo: {
     paddingTop: 10,
+    paddingBottom: 40,
   },
   poiTitle: {
     fontSize: 24,
@@ -353,21 +422,25 @@ const styles = StyleSheet.create({
     color: '#666',
     lineHeight: 24,
   },
-  // User location marker
-  userMarker: {
-    width: 24,
-    height: 24,
+  // Audio Player Styles
+  audioContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.primary, // Orange
+    padding: 12,
     borderRadius: 12,
-    backgroundColor: 'rgba(66, 133, 244, 0.3)',
+    marginBottom: 16,
+  },
+  playButton: {
+    width: 40,
+    height: 40,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  userMarkerInner: {
-    width: 14,
-    height: 14,
-    borderRadius: 7,
-    backgroundColor: '#4285F4',
-    borderWidth: 2,
-    borderColor: 'white',
+  audioText: {
+    color: 'white',
+    fontWeight: 'bold',
+    fontSize: 16,
+    marginLeft: 8,
   },
 });

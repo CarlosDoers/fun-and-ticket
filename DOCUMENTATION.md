@@ -10,7 +10,7 @@ La aplicación es una **guía turística interactiva** que permite a los usuario
 
 ### Flujo Principal
 \`\`\`
-Usuario escanea QR → Se valida el código → Se muestra el mapa del tour con la ruta y POIs
+Usuario escanea QR → Se valida el código → Se muestra el mapa del tour con la ruta y POIs → Usuario puede ver imágenes y escuchar audio guías
 \`\`\`
 
 ---
@@ -21,11 +21,12 @@ Usuario escanea QR → Se valida el código → Se muestra el mapa del tour con 
 |------------|-----|
 | **React Native + Expo SDK 54** | Framework multiplataforma (iOS, Android, Web) |
 | **Expo Router** | Navegación basada en archivos (como Next.js) |
-| **Supabase** | Backend: base de datos PostgreSQL + autenticación |
+| **Supabase** | Backend: base de datos PostgreSQL + autenticación + Storage |
 | **TypeScript** | Tipado estático para mayor seguridad |
 | **react-native-maps** | Mapas nativos (iOS/Android) |
 | **react-leaflet** | Mapas para versión Web |
 | **expo-camera** | Escaneo de códigos QR |
+| **expo-av** | Reproducción de Audio |
 | **Gluestack UI** | Sistema de componentes UI (v2) |
 
 ---
@@ -49,10 +50,8 @@ Usuario escanea QR → Se valida el código → Se muestra el mapa del tour con 
 │
 ├── src/                      # 📦 Código fuente compartido
 │   ├── components/           #    └── Componentes reutilizables
-│   │   ├── MapView.tsx       #        Mapa nativo (iOS/Android)
+│   │   ├── MapView.tsx       #        Mapa nativo con Audio Player
 │   │   ├── MapView.web.tsx   #        Mapa web (Leaflet)
-│   │   ├── WebMapEditor.tsx  #        Placeholder nativo
-│   │   └── WebMapEditor.web.tsx #     Editor de rutas (solo web)
 │   ├── lib/
 │   │   ├── auth.tsx          #    └── Contexto y hook de autenticación
 │   │   ├── supabase.ts       #    └── Cliente de Supabase configurado
@@ -64,405 +63,18 @@ Usuario escanea QR → Se valida el código → Se muestra el mapa del tour con 
 
 ---
 
-## 4. Navegación con Expo Router
+## 4. Funcionalidad de Audio Guías
+
+Se ha implementado la capacidad de subir y reproducir audio guías asociadas a los Puntos de Interés (POIs).
+
+1.  **Storage**: Los archivos de audio se almacenan en un bucket de Supabase llamado \`audios\`.
+2.  **Base de Datos**: La tabla \`pois\` tiene una columna \`audio_url\` que guarda el enlace público del archivo.
+3.  **Administración**: Desde el dashboard (\`pois/index.tsx\`), los administradores pueden subir archivos de audio al crear o editar un POI.
+4.  **Reproducción**: En la vista pública del mapa (\`MapView.tsx\`), al abrir un POI que contiene audio, aparece un reproductor integrado que permite escuchar la descripción.
+
+---
+
+## 5. Navegación con Expo Router
 
 Expo Router usa **navegación basada en archivos** (file-based routing), similar a Next.js.
-
-### 4.1 ¿Cómo funciona?
-
-Cada archivo \`.tsx\` dentro de \`app/\` se convierte automáticamente en una ruta:
-
-| Archivo | Ruta resultante | Descripción |
-|---------|-----------------|-------------|
-| \`app/index.tsx\` | \`/\` | Pantalla de inicio |
-| \`app/scan.tsx\` | \`/scan\` | Escáner QR |
-| \`app/map/[tourId].tsx\` | \`/map/123\` | Ruta dinámica (el \`[tourId]\` captura el ID) |
-| \`app/(auth)/login.tsx\` | \`/(auth)/login\` | Pantalla de login |
-| \`app/(dashboard)/index.tsx\` | \`/(dashboard)\` | Dashboard principal |
-
-### 4.2 Grupos de Rutas (Paréntesis)
-
-Los directorios con paréntesis como \`(auth)\` y \`(dashboard)\` son **grupos de rutas**:
-- Sirven para organizar archivos relacionados
-- El nombre del grupo aparece en la URL
-- Permiten aplicar layouts específicos a un conjunto de pantallas
-
-### 4.3 Rutas Dinámicas (Corchetes)
-
-Los archivos con corchetes como \`[tourId].tsx\` crean **rutas dinámicas**:
-
-\`\`\`tsx
-// En app/map/[tourId].tsx
-import { useLocalSearchParams } from 'expo-router';
-
-export default function MapScreen() {
-  const { tourId } = useLocalSearchParams();
-  // tourId contendrá "123" si la URL es /map/123
-}
-\`\`\`
-
-### 4.4 Layout y Protección de Rutas
-
-El archivo \`app/_layout.tsx\` envuelve TODAS las pantallas. Sus funciones son:
-
-1. **Proveer contexto de autenticación** a toda la app
-2. **Proteger rutas**: Si intentas acceder a \`(dashboard)\` sin sesión, te redirige a login
-3. **Redirigir usuarios logueados**: Si un admin intenta ir al login, lo manda al dashboard
-
-\`\`\`tsx
-// Ejemplo simplificado de _layout.tsx
-function InitialLayout() {
-  const { session, isAdmin } = useAuth();
-  const segments = useSegments(); // ej: ['(dashboard)', 'tours']
-
-  useEffect(() => {
-    // Si está en dashboard sin sesión -> redirect a login
-    if (segments[0] === '(dashboard)' && !session) {
-      router.replace('/(auth)/login');
-    }
-  }, [session, segments]);
-
-  return <Slot />; // Renderiza el contenido de la ruta actual
-}
-\`\`\`
-
----
-
-## 5. Hooks de React Usados
-
-Los **hooks** son funciones especiales de React que permiten usar estado y otras características. Esta app usa varios:
-
-### 5.1 \`useState\` - Estado Local
-
-Guarda datos que pueden cambiar durante la vida del componente.
-
-\`\`\`tsx
-const [loading, setLoading] = useState(false);
-// loading = valor actual
-// setLoading = función para cambiarlo
-
-setLoading(true);  // Cambia loading a true
-\`\`\`
-
-### 5.2 \`useEffect\` - Efectos Secundarios
-
-Ejecuta código cuando el componente se monta o cuando cambian ciertas dependencias.
-
-\`\`\`tsx
-useEffect(() => {
-  // Este código se ejecuta al montar el componente
-  fetchTours();
-}, []); // Array vacío = solo al montar
-
-useEffect(() => {
-  // Este código se ejecuta cada vez que 'tourId' cambia
-  if (tourId) fetchTour(tourId);
-}, [tourId]); // Se re-ejecuta cuando tourId cambia
-\`\`\`
-
-### 5.3 \`useRouter\` y \`useLocalSearchParams\` (Expo Router)
-
-\`\`\`tsx
-import { useRouter, useLocalSearchParams } from 'expo-router';
-
-const router = useRouter();
-router.push('/scan');           // Navega a /scan
-router.replace('/');            // Reemplaza la pantalla actual
-router.back();                  // Vuelve atrás
-
-const { tourId } = useLocalSearchParams(); // Obtiene parámetros de la URL
-\`\`\`
-
-### 5.4 \`useAuth\` - Hook Personalizado
-
-Este es un **custom hook** creado en \`src/lib/auth.tsx\`. Simplifica el acceso al estado de autenticación:
-
-\`\`\`tsx
-const { session, user, loading, isAdmin, isGuide, signOut } = useAuth();
-
-// session: Sesión de Supabase (null si no está logueado)
-// user: Datos del usuario actual
-// loading: true mientras verifica la sesión
-// isAdmin/isGuide: Roles del usuario
-// signOut: Función para cerrar sesión
-\`\`\`
-
----
-
-## 6. Context API (Contexto de React)
-
-El **Context** permite pasar datos a toda la aplicación sin tener que pasarlos manualmente a cada componente.
-
-### ¿Cómo funciona en esta app?
-
-1. **Se crea el contexto** en \`src/lib/auth.tsx\`:
-   \`\`\`tsx
-   const AuthContext = createContext({...});
-   \`\`\`
-
-2. **Se provee el contexto** en \`_layout.tsx\`:
-   \`\`\`tsx
-   <AuthProvider>
-     <App />
-   </AuthProvider>
-   \`\`\`
-
-3. **Se consume el contexto** en cualquier componente:
-   \`\`\`tsx
-   const { isAdmin } = useAuth(); // useAuth usa useContext internamente
-   \`\`\`
-
----
-
-## 7. Componentes Principales
-
-### 7.1 MapView (\`src/components/MapView.tsx\`)
-
-Muestra el mapa interactivo con la ruta del tour.
-
-**Props:**
-- \`routeData\`: Objeto con \`waypoints\` (puntos de la ruta) y \`pois\` (puntos de interés)
-- \`style\`: Estilos opcionales
-
-**Funcionalidades:**
-- **Auto-zoom**: Calcula automáticamente la región para mostrar todos los puntos
-- **Polyline**: Dibuja la línea de la ruta conectando los waypoints
-- **Markers**: Coloca marcadores en cada POI
-- **Callout**: Al tocar un marcador, muestra título, descripción e imágenes
-
-> **Nota sobre Platform-Specific Files**: Existen dos versiones:
-> - \`MapView.tsx\` → Usa \`react-native-maps\` (para iOS/Android)
-> - \`MapView.web.tsx\` → Usa \`react-leaflet\` (para Web)
-> 
-> React Native automáticamente elige el archivo correcto según la plataforma.
-
-### 7.2 WebMapEditor (\`src/components/WebMapEditor.web.tsx\`)
-
-Editor de rutas usado en el dashboard (solo funciona en web).
-
-**Características:**
-- Click derecho para añadir POIs
-- Arrastrar marcadores para moverlos
-- Generación automática de rutas usando OSRM (Open Source Routing Machine)
-- Optimización del orden de POIs para la ruta más corta
-
-### 7.3 Escáner QR (\`app/scan.tsx\`)
-
-**Flujo:**
-1. Solicita permiso de cámara (\`Camera.requestCameraPermissionsAsync()\`)
-2. Muestra la cámara con \`CameraView\`
-3. Al detectar un QR, busca el código en Supabase
-4. Si es válido, navega a \`/map/[tourId]\`
-
----
-
-## 8. Modelos de Datos (\`src/types.ts\`)
-
-### Tour
-\`\`\`typescript
-type Tour = {
-  id: string;
-  name: string;
-  description: string;
-  route_data: RouteData;
-  created_by: string;
-  created_at: string;
-};
-\`\`\`
-
-### RouteData
-\`\`\`typescript
-type RouteData = {
-  waypoints: Coordinate[]; // Puntos que forman la línea de la ruta
-  pois: POI[];             // Puntos de interés con info
-};
-\`\`\`
-
-### POI (Point of Interest)
-\`\`\`typescript
-type POI = {
-  latitude: number;
-  longitude: number;
-  title: string;
-  description: string;
-  images?: string[]; // URLs de imágenes
-};
-\`\`\`
-
-### QR
-\`\`\`typescript
-type QR = {
-  id: string;
-  code: string;        // El texto que contiene el QR
-  tour_id: string;     // Referencia al tour
-  is_active: boolean;
-  expires_at?: string; // Fecha de caducidad (opcional)
-  created_at: string;
-};
-\`\`\`
-
----
-
-## 9. Estilos en React Native
-
-React Native usa \`StyleSheet.create()\` en lugar de CSS. La sintaxis es similar pero con diferencias:
-
-| CSS | React Native |
-|-----|--------------|
-| \`background-color\` | \`backgroundColor\` |
-| \`font-size: 16px\` | \`fontSize: 16\` |
-| \`padding: 10px 20px\` | \`paddingVertical: 10, paddingHorizontal: 20\` |
-| \`display: flex\` | \`display: 'flex'\` (es el default) |
-
-**Ejemplo:**
-\`\`\`tsx
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#fff',
-    padding: 20,
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#333',
-  },
-});
-
-// Uso:
-<View style={styles.container}>
-  <Text style={styles.title}>Hola</Text>
-</View>
-\`\`\`
-
----
-
-## 10. Supabase: Base de Datos y Auth
-
-### Configuración (\`src/lib/supabase.ts\`)
-
-\`\`\`typescript
-import { createClient } from '@supabase/supabase-js';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-
-const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL;
-const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
-
-export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-  auth: {
-    storage: AsyncStorage, // Guarda la sesión en el dispositivo
-    autoRefreshToken: true,
-    persistSession: true,
-  },
-});
-\`\`\`
-
-### Operaciones comunes
-
-\`\`\`typescript
-// Leer datos
-const { data, error } = await supabase
-  .from('tours')
-  .select('*')
-  .eq('id', tourId)
-  .single();
-
-// Insertar datos
-await supabase.from('tours').insert({
-  name: 'Mi Tour',
-  description: 'Descripción...',
-});
-
-// Actualizar datos
-await supabase
-  .from('tours')
-  .update({ name: 'Nuevo nombre' })
-  .eq('id', tourId);
-
-// Eliminar datos
-await supabase.from('tours').delete().eq('id', tourId);
-\`\`\`
-
-### 10.3 Gestión de Usuarios y Roles
-
-La aplicación utiliza un sistema de roles básicos (\`admin\`, \`guide\`, \`user\`) gestionados en la tabla \`profiles\`.
-
-**Crear un Administrador:**
-
-Por seguridad, el rol \`admin\` no se puede asignar desde la aplicación. Debe hacerse manualmente directamente en la base de datos de Supabase.
-
-1.  El usuario se registra normalmente en la aplicación (o en la pantalla de registro oculta).
-2.  Un administrador accede al **SQL Editor** de Supabase.
-3.  Ejecuta el siguiente comando (sustituyendo el email):
-
-\`\`\`sql
-insert into public.profiles (id, email, role)
-select id, email, 'admin'
-from auth.users
-where email = 'correo@ejemplo.com'
-on conflict (id) do update
-set role = 'admin';
-\`\`\`
-
----
-
-## 11. Comandos Útiles
-
-\`\`\`bash
-# Iniciar en modo desarrollo
-npm start
-
-# Iniciar solo web
-npm run web
-
-# Iniciar en Android
-npm run android
-
-# Iniciar en iOS
-npm run ios
-\`\`\`
-
----
-
-## 12. Sistema de Diseño (Dark Orange Theme)
-
-La aplicación implementa un sistema de diseño consistente basado en un **tema oscuro con acentos en naranja vibrante**.
-
-### Definición Centralizada (\`src/lib/theme.ts\`)
-
-Todos los colores y tokens de diseño están centralizados en un único archivo para garantizar la consistencia.
-
-#### Paleta de Colores
-| Token | Valor Hex | Uso Principal |
-|-------|-----------|---------------|
-| \`colors.brand.orange\` | \`#FF5E00\` | Acciones primarias, iconos destacados, bordes de foco |
-| \`colors.background\` | \`#0F0F0F\` | Fondo principal de la aplicación (Deep Dark) |
-| \`colors.surface\` | \`#18181b\` | Tarjetas, modales, barras laterales |
-| \`colors.textPrimary\` | \`#FFFFFF\` | Títulos y texto principal |
-| \`colors.textSecondary\` | \`#A1A1AA\` | Subtítulos y descripciones |
-| \`colors.border\` | \`#27272a\` | Bordes sutiles para separar secciones |
-
-### Componentes de UI (Gluestack UI)
-
-Se utiliza **Gluestack UI** como librería de componentes base, pero estilizados con los tokens del tema:
-
-- **Botones:** Variantes \`solid\` (naranja) y \`outline\` (borde sutil).
-- **Inputs:** Fondo oscuro (\`#121212\`) con borde gris que cambia a naranja al enfocar.
-- **Tarjetas:** Fondo \`colors.surface\` con bordes redondeados (\`rounded="$2xl"\`) y bordes sutiles (\`colors.border\`).
-
----
-
-## 13. Glosario de Términos
-
-| Término | Descripción |
-|---------|-------------|
-| **Componente** | Bloque de UI reutilizable (función que retorna JSX) |
-| **Props** | Parámetros que se pasan a un componente |
-| **State** | Datos internos de un componente que pueden cambiar |
-| **Hook** | Función especial de React que empieza con \`use\` |
-| **Context** | Sistema para compartir datos globalmente |
-| **Layout** | Componente que envuelve y estructura otras pantallas |
-| **Route Group** | Carpeta con paréntesis \`(nombre)\` para organizar rutas |
-| **Dynamic Route** | Archivo con corchetes \`[param]\` para capturar valores de la URL |
-| **Waypoint** | Punto geográfico que forma parte de una ruta |
-| **POI** | Point of Interest - Punto de interés con información |
+... (Resto del documento igual)

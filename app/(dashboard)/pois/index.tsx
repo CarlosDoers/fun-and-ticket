@@ -6,9 +6,9 @@ import { useRouter } from 'expo-router';
 import { supabase } from '../../../src/lib/supabase';
 import { POI } from '../../../src/types';
 import { colors } from '../../../src/lib/theme';
-import { Feather } from '@expo/vector-icons';
 import WebMapEditor from '../../../src/components/WebMapEditor';
 import * as DocumentPicker from 'expo-document-picker';
+import { Audio } from 'expo-av';
 
 import { 
   Box, 
@@ -47,7 +47,8 @@ import {
   TrashIcon, 
   MapPinIcon, 
   UploadIcon, 
-  XIcon 
+  XIcon,
+  PlayCircleIcon
 } from 'lucide-react-native';
 
 const { width } = Dimensions.get('window');
@@ -85,6 +86,42 @@ async function uploadImageToSupabase(uri: string): Promise<string | null> {
     return publicUrl;
   } catch (error) {
     console.error('Upload error:', error);
+    return null;
+  }
+}
+
+async function uploadAudioToSupabase(uri: string): Promise<string | null> {
+  try {
+    let fileData: ArrayBuffer | Blob;
+    let fileName = '';
+    let contentType = 'audio/mpeg';
+
+    if (Platform.OS === 'web') {
+      const response = await fetch(uri);
+      const blob = await response.blob();
+      fileData = blob;
+      fileName = `audio_${Date.now()}.mp3`; 
+      contentType = blob.type || 'audio/mpeg';
+    } else {
+       return null;
+    }
+
+    const { data, error } = await supabase.storage
+      .from('audios')
+      .upload(fileName, fileData, {
+        contentType,
+        upsert: false
+      });
+
+    if (error) throw error;
+
+    const { data: { publicUrl } } = supabase.storage
+      .from('audios')
+      .getPublicUrl(data.path);
+
+    return publicUrl;
+  } catch (error) {
+    console.error('Audio upload error:', error);
     return null;
   }
 }
@@ -137,13 +174,24 @@ export default function POIManagementScreen() {
   const [editTitle, setEditTitle] = useState('');
   const [editDesc, setEditDesc] = useState('');
   const [editImages, setEditImages] = useState<string[]>([]);
+  const [editAudio, setEditAudio] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
+  
+  const [sound, setSound] = useState<Audio.Sound | null>(null);
 
   useEffect(() => {
     if (activeTab === 'list') {
       fetchPois();
     }
   }, [activeTab]);
+
+  useEffect(() => {
+    return sound
+      ? () => {
+          sound.unloadAsync();
+        }
+      : undefined;
+  }, [sound]);
 
   async function fetchPois() {
     setLoading(true);
@@ -198,7 +246,8 @@ export default function POIManagementScreen() {
       .update({
         title: editTitle,
         description: editDesc,
-        images: editImages
+        images: editImages,
+        audio_url: editAudio
       })
       .eq('id', editingPoi.id);
 
@@ -218,8 +267,23 @@ export default function POIManagementScreen() {
     setEditTitle(poi.title);
     setEditDesc(poi.description);
     setEditImages(poi.images || []);
+    setEditAudio(poi.audio_url || null);
     setShowEditModal(true);
   };
+
+  async function playSound(url: string) {
+    try {
+      if (sound) {
+        await sound.unloadAsync();
+      }
+      const { sound: newSound } = await Audio.Sound.createAsync({ uri: url });
+      setSound(newSound);
+      await newSound.playAsync();
+    } catch (error) {
+      console.error('Error playing sound', error);
+      Alert.alert('Error', 'No se pudo reproducir el audio');
+    }
+  }
 
   return (
     <Box flex={1} bg={colors.background}>
@@ -279,6 +343,12 @@ export default function POIManagementScreen() {
                     <VStack flex={1} mr="$3">
                       <Heading size="sm" color={colors.textPrimary} mb="$1">{item.title}</Heading>
                       <Text color={colors.textSecondary} size="sm" numberOfLines={2} mb="$2">{item.description}</Text>
+                      {item.audio_url && (
+                        <HStack alignItems="center" space="xs" mb="$2">
+                          <Icon as={PlayCircleIcon} size="xs" color={colors.brand.orange} />
+                          <Text color={colors.brand.orange} size="xs">Audio disponible</Text>
+                        </HStack>
+                      )}
                       <HStack bg={colors.background} px="$2" py="$1" rounded="$md" alignSelf="flex-start" alignItems="center" space="xs" borderWidth={1} borderColor={colors.border}>
                         <Icon as={MapPinIcon} size="xs" color={colors.textMuted} />
                         <Text size="xs" color={colors.textMuted}>
@@ -340,6 +410,55 @@ export default function POIManagementScreen() {
                       <Textarea variant="default" borderWidth={1} borderColor={colors.border} bg={colors.inputBackground}>
                          <TextareaInput value={editDesc} onChangeText={setEditDesc} color={colors.textPrimary} />
                       </Textarea>
+                    </FormControl>
+
+                    <FormControl>
+                      <FormControlLabel mb="$1"><FormControlLabelText color={colors.textSecondary}>Audio Guía</FormControlLabelText></FormControlLabel>
+                      <HStack space="sm" alignItems="center" flexWrap="wrap">
+                         {editAudio ? (
+                           <HStack space="sm" alignItems="center" bg={colors.background} p="$2" rounded="$md" borderWidth={1} borderColor={colors.border} mb="$2">
+                             <Button size="xs" variant="link" onPress={() => playSound(editAudio)}>
+                               <Icon as={PlayCircleIcon} size="sm" color={colors.brand.orange} />
+                               <ButtonText ml="$1" color={colors.textPrimary}>Escuchar</ButtonText>
+                             </Button>
+                             <Pressable onPress={() => setEditAudio(null)}>
+                               <Icon as={XIcon} size="xs" color="$red500" />
+                             </Pressable>
+                           </HStack>
+                         ) : (
+                           <Text color={colors.textMuted} size="sm" mb="$2" mr="$2">Sin audio</Text>
+                         )}
+                         
+                         <Button 
+                            size="sm"
+                            variant="outline"
+                            borderColor={colors.border}
+                            onPress={async () => {
+                              try {
+                                const result = await DocumentPicker.getDocumentAsync({
+                                  type: 'audio/*',
+                                  copyToCacheDirectory: true,
+                                });
+                                if (result.canceled) return;
+                                setUploading(true);
+                                const asset = result.assets[0];
+                                const uploadedUrl = await uploadAudioToSupabase(asset.uri);
+                                if (uploadedUrl) {
+                                  setEditAudio(uploadedUrl);
+                                } else {
+                                  Alert.alert('Error', 'Error subiendo el audio');
+                                }
+                              } catch (err) {
+                                Alert.alert('Error', 'Error seleccionando audio');
+                              } finally {
+                                setUploading(false);
+                              }
+                            }}
+                         >
+                            <ButtonText color={colors.textPrimary}>Subir Audio</ButtonText>
+                            <ButtonIcon as={UploadIcon} ml="$2" color={colors.textPrimary}/>
+                         </Button>
+                      </HStack>
                     </FormControl>
 
                     <FormControl>

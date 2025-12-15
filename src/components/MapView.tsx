@@ -146,11 +146,33 @@ interface MapViewProps {
   style?: any;
 }
 
+
+// Helper for distance calculation (Haversine formula)
+function getDistanceFromLatLonInMeters(lat1: number, lon1: number, lat2: number, lon2: number) {
+  var R = 6371; // Radius of the earth in km
+  var dLat = deg2rad(lat2 - lat1);  // deg2rad below
+  var dLon = deg2rad(lon2 - lon1);
+  var a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(deg2rad(lat1)) * Math.cos(deg2rad(lat2)) *
+    Math.sin(dLon / 2) * Math.sin(dLon / 2)
+    ;
+  var c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  var d = R * c; // Distance in km
+  return d * 1000; // Distance in meters
+}
+
+function deg2rad(deg: number) {
+  return deg * (Math.PI / 180);
+}
+
 export default function MapView({ routeData, style }: MapViewProps) {
   const [selectedPoi, setSelectedPoi] = useState<POI | null>(null);
   const [modalVisible, setModalVisible] = useState(false);
   const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>(null);
   const [locationError, setLocationError] = useState<string | null>(null);
+  // Keep track of visited POIs to avoid auto-opening them multiple times in a row
+  const [visitedPoiIds, setVisitedPoiIds] = useState<Set<number | string>>(new Set());
 
   const waypoints = routeData?.waypoints || [];
   const pois = routeData?.pois || [];
@@ -184,10 +206,11 @@ export default function MapView({ routeData, style }: MapViewProps) {
             distanceInterval: 5,
           },
           (location) => {
-            setUserLocation({
+             const newLoc = {
               latitude: location.coords.latitude,
               longitude: location.coords.longitude,
-            });
+            };
+            setUserLocation(newLoc);
           }
         );
       } catch (error) {
@@ -204,6 +227,41 @@ export default function MapView({ routeData, style }: MapViewProps) {
       }
     };
   }, []);
+
+  // Monitor proximity to POIs
+  useEffect(() => {
+    if (!userLocation || !pois) return;
+
+    pois.forEach(poi => {
+      // Assuming POI has an id. If not, we might need a fallback, but RouteData POIs should have ids typically.
+      // If poi.id is missing in type, we might need to update type or use index (less reliable).
+      // Based on previous files, RouteData is loosely typed but Supabase returns ids.
+      // Let's assume poi.id exists or use coordinates as key if needed (but ID is better).
+      const poiId = poi.id || `${poi.latitude}-${poi.longitude}`; 
+
+      if (visitedPoiIds.has(poiId)) return;
+
+      const dist = getDistanceFromLatLonInMeters(
+        userLocation.latitude,
+        userLocation.longitude,
+        poi.latitude,
+        poi.longitude
+      );
+
+      // Threshold: 5 meters
+      if (dist < 5) {
+        // Auto-open
+        setSelectedPoi(poi);
+        setModalVisible(true);
+        setVisitedPoiIds(prev => {
+          const newSet = new Set(prev);
+          newSet.add(poiId);
+          return newSet;
+        });
+      }
+    });
+
+  }, [userLocation, pois, visitedPoiIds]);
 
   const handleMarkerPress = (poi: POI) => {
     setSelectedPoi(poi);
@@ -266,6 +324,17 @@ export default function MapView({ routeData, style }: MapViewProps) {
             onPress={() => handleMarkerPress(poi)}
           />
         ))}
+
+        {/* Debug Circle to visualize activation range during dev (optional) */}
+        {/* {pois.map((poi, i) => (
+           <Circle
+             key={`circle-${i}`}
+             center={{ latitude: poi.latitude, longitude: poi.longitude }}
+             radius={20}
+             strokeColor="rgba(0,122,255,0.5)"
+             fillColor="rgba(0,122,255,0.2)"
+           />
+        ))} */}
       </RNMapView>
 
       <POIDetailModal

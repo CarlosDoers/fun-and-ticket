@@ -9,6 +9,7 @@ import { colors } from '../../../src/lib/theme';
 import WebMapEditor from '../../../src/components/WebMapEditor';
 import * as DocumentPicker from 'expo-document-picker';
 import { useAudioPlayer } from 'expo-audio';
+import { generateSpeech } from '../../../src/lib/elevenlabs';
 
 import { 
   Box, 
@@ -48,7 +49,8 @@ import {
   MapPinIcon, 
   UploadIcon, 
   XIcon,
-  PlayCircleIcon
+  PlayCircleIcon,
+  Wand2Icon
 } from 'lucide-react-native';
 
 const { width } = Dimensions.get('window');
@@ -126,6 +128,30 @@ async function uploadAudioToSupabase(uri: string): Promise<string | null> {
   }
 }
 
+async function uploadAudioDataToSupabase(audioData: ArrayBuffer): Promise<string | null> {
+  try {
+    const fileName = `audio_gen_${Date.now()}.mp3`;
+    const { data, error } = await supabase.storage
+      .from('audios')
+      .upload(fileName, audioData, {
+        contentType: 'audio/mpeg',
+        upsert: false
+      });
+
+    if (error) throw error;
+
+    const { data: { publicUrl } } = supabase.storage
+      .from('audios')
+      .getPublicUrl(data.path);
+
+    return publicUrl;
+  } catch (error) {
+    console.error('Audio upload error:', error);
+    return null;
+  }
+}
+
+
 function Tabs({ activeTab, onTabChange }) {
   return (
     <HStack bg={colors.background} borderBottomWidth={1} borderBottomColor={colors.border}>
@@ -176,6 +202,7 @@ export default function POIManagementScreen() {
   const [editImages, setEditImages] = useState<string[]>([]);
   const [editAudio, setEditAudio] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [generatingAudio, setGeneratingAudio] = useState(false);
   const inputRef = useRef<any>(null);
   
   const player = useAudioPlayer(null);
@@ -248,6 +275,17 @@ export default function POIManagementScreen() {
        Alert.alert('Error', 'No se pudo actualizar el POI: ' + error.message);
     } else {
        Alert.alert('Éxito', 'Punto de interés actualizado.');
+
+       // Sync with tours
+       const updatedPoiData = {
+         ...editingPoi,
+         title: editTitle,
+         description: editDesc,
+         images: editImages,
+         audio_url: editAudio
+       };
+       await updateToursWithPoi(updatedPoiData);
+
        setShowEditModal(false);
        setEditingPoi(null);
        fetchPois();
@@ -271,6 +309,39 @@ export default function POIManagementScreen() {
     } catch (error) {
       console.error('Error playing sound', error);
       Alert.alert('Error', 'No se pudo reproducir el audio');
+    }
+  }
+
+  async function updateToursWithPoi(updatedPoi: POI) {
+    try {
+      const { data: tours, error } = await supabase.from('tours').select('*');
+      if (error) throw error;
+
+      const toursToUpdate = tours.filter((tour: any) => 
+        tour.route_data?.pois?.some((p: any) => p.id === updatedPoi.id)
+      );
+
+      if (toursToUpdate.length > 0) {
+        const updates = toursToUpdate.map(tour => {
+          const newPois = tour.route_data.pois.map((p: any) => 
+            p.id === updatedPoi.id ? updatedPoi : p
+          );
+          
+          return supabase
+            .from('tours')
+            .update({
+              route_data: {
+                ...tour.route_data,
+                pois: newPois
+              }
+            })
+            .eq('id', tour.id);
+        });
+
+        await Promise.all(updates);
+      }
+    } catch (err) {
+      console.error('Error syncing tours:', err);
     }
   }
 
@@ -447,6 +518,46 @@ export default function POIManagementScreen() {
                             <ButtonText color={colors.textPrimary}>Subir Audio</ButtonText>
                             <ButtonIcon as={UploadIcon} ml="$2" color={colors.textPrimary}/>
                          </Button>
+
+                         <Button 
+                            size="sm"
+                            variant="outline"
+                            borderColor={colors.brand.orange}
+                            isDisabled={!editDesc || generatingAudio}
+                            onPress={async () => {
+                              if (!editDesc) {
+                                Alert.alert('Error', 'Debes escribir una descripción primero.');
+                                return;
+                              }
+                              try {
+                                setGeneratingAudio(true);
+                                const audioBuffer = await generateSpeech(editDesc);
+                                const uploadedUrl = await uploadAudioDataToSupabase(audioBuffer);
+                                
+                                if (uploadedUrl) {
+                                  setEditAudio(uploadedUrl);
+                                  Alert.alert('Éxito', 'Audio generado y guardado correctamente.');
+                                } else {
+                                  Alert.alert('Error', 'No se pudo guardar el audio generado.');
+                                }
+                              } catch (err: any) {
+                                console.error(err);
+                                Alert.alert('Error generando audio', err.message);
+                              } finally {
+                                setGeneratingAudio(false);
+                              }
+                            }}
+                         >
+                            {generatingAudio ? (
+                              <Spinner size="small" color={colors.brand.orange} />
+                            ) : (
+                              <HStack alignItems="center" space="xs">
+                                <ButtonText color={colors.brand.orange}>Generar Audio IA</ButtonText>
+                                <ButtonIcon as={Wand2Icon} ml="$1" color={colors.brand.orange} />
+                              </HStack>
+                            )}
+                         </Button>
+
                       </HStack>
                     </FormControl>
 
